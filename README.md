@@ -1,1 +1,0 @@
-# onaji-pose3
