@@ -113,6 +113,17 @@
   .modal-footer{ display:flex; justify-content:center; margin-top:14px; }
   .top-buttons{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
 
+  .start-level-picker{ margin:4px 0 18px; }
+  .start-level-label{ font-size:14px; color:var(--sub); margin-bottom:8px; }
+  .level-pick{
+    background:#fff; color:var(--text); box-shadow:0 3px 0 var(--border);
+    border:2px solid var(--border);
+  }
+  .level-pick.selected{
+    background:var(--main-blue); color:#fff; box-shadow:0 3px 0 var(--main-blue-dark);
+    border:2px solid var(--main-blue);
+  }
+
   .settings-link{
     position:absolute; top:14px; right:14px;
   }
@@ -131,6 +142,11 @@
   .setting-desc{ font-size:13px; color:var(--sub); margin:2px 0 10px; }
 
   .pose-checklist{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+  .pose-level-block{ margin-bottom:16px; }
+  .pose-level-heading{
+    font-size:14px; font-weight:700; color:var(--main-blue-dark);
+    margin:0 0 8px; padding-left:2px;
+  }
   .pose-check{
     display:flex; align-items:center; gap:8px; background:#f5f2e8; border-radius:12px;
     padding:10px 12px; min-height:44px; border:2px solid transparent;
@@ -271,6 +287,14 @@
     <div class="start-card">
       <h1><ruby>同<rt>おな</rt></ruby>じポーズをしよう3</h1>
       <p>おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>を<ruby>作<rt>つく</rt></ruby>って、しばらくキープしてみよう。</p>
+      <div class="start-level-picker">
+        <div class="start-level-label"><ruby>難<rt>むずか</rt></ruby>しさをえらんでね</div>
+        <div class="radio-row" id="startLevelRow" style="justify-content:center;">
+          <button class="btn small level-pick" id="startLevelEasy" type="button" data-level="easy">やさしい</button>
+          <button class="btn small level-pick" id="startLevelNormal" type="button" data-level="normal">ふつう</button>
+          <button class="btn small level-pick" id="startLevelHard" type="button" data-level="hard">ちょいむず</button>
+        </div>
+      </div>
       <div class="top-buttons">
         <button class="btn green" id="btnStart">はじめる</button>
         <button class="btn gray" id="btnOpenSettings">せってい</button>
@@ -292,17 +316,17 @@
         <div class="setting-desc">ボタンをおすと、レベルにあわせてまとめてチェックが入るよ(あとから<ruby>一<rt>ひと</rt></ruby>つずつ<ruby>変<rt>か</rt></ruby>えてもOK)</div>
         <div class="radio-row" id="levelButtonRow" style="margin-bottom:14px;">
           <button class="btn small" id="levelEasyBtn" type="button">やさしい</button>
-          <button class="btn small green" id="levelNormalBtn" type="button">ふつう</button>
-          <button class="btn small gray" id="levelHardBtn" type="button">むずかしい</button>
+          <button class="btn small" id="levelNormalBtn" type="button">ふつう</button>
+          <button class="btn small" id="levelHardBtn" type="button">ちょいむず</button>
         </div>
-        <div class="pose-checklist" id="poseChecklist"></div>
+        <div id="poseChecklist"></div>
       </div>
 
       <div class="setting-group">
         <span class="setting-label">キープする<ruby>秒<rt>びょう</rt></ruby><ruby>数<rt>すう</rt></ruby></span>
         <div class="stepper">
           <button id="keepMinus">▽</button>
-          <input type="number" id="keepSecInput" value="10" min="1" max="30" inputmode="numeric">
+          <input type="number" id="keepSecInput" value="5" min="1" max="30" inputmode="numeric">
           <span class="unit">びょう</span>
           <button id="keepPlus">△</button>
         </div>
@@ -344,8 +368,8 @@
       <div class="setting-group">
         <span class="setting-label">「できたね」のあとは?</span>
         <div class="radio-row" id="afterOkRow">
-          <div class="radio-chip" data-value="auto"><input type="radio" name="afterOk" id="afterAuto" value="auto"><label for="afterAuto">じどうで<ruby>次<rt>つぎ</rt></ruby>へ</label></div>
-          <div class="radio-chip" data-value="manual"><input type="radio" name="afterOk" id="afterManual" value="manual" checked><label for="afterManual">「つぎへ」ボタンですすむ</label></div>
+          <div class="radio-chip" data-value="auto"><input type="radio" name="afterOk" id="afterAuto" value="auto" checked><label for="afterAuto">じどうで<ruby>次<rt>つぎ</rt></ruby>へ</label></div>
+          <div class="radio-chip" data-value="manual"><input type="radio" name="afterOk" id="afterManual" value="manual"><label for="afterManual">「つぎへ」ボタンですすむ</label></div>
         </div>
       </div>
 
@@ -353,8 +377,8 @@
         <span class="setting-label">キープできなかったときは?</span>
         <div class="radio-desc setting-desc">せいげん<ruby>時<rt>じ</rt></ruby><ruby>間<rt>かん</rt></ruby>を<ruby>過<rt>す</rt></ruby>ぎたときの<ruby>動<rt>うご</rt></ruby>き</div>
         <div class="radio-row" id="timeupModeRow">
-          <div class="radio-chip" data-value="auto"><input type="radio" name="timeupMode" id="timeupAuto" value="auto"><label for="timeupAuto">じどうで<ruby>次<rt>つぎ</rt></ruby>へ</label></div>
-          <div class="radio-chip" data-value="manual"><input type="radio" name="timeupMode" id="timeupManual" value="manual" checked><label for="timeupManual">「つぎへ」ボタンですすむ</label></div>
+          <div class="radio-chip" data-value="auto"><input type="radio" name="timeupMode" id="timeupAuto" value="auto" checked><label for="timeupAuto">じどうで<ruby>次<rt>つぎ</rt></ruby>へ</label></div>
+          <div class="radio-chip" data-value="manual"><input type="radio" name="timeupMode" id="timeupManual" value="manual"><label for="timeupManual">「つぎへ」ボタンですすむ</label></div>
         </div>
       </div>
 
@@ -551,15 +575,63 @@ const POSE_DEFS = {
     ruby: "かた<ruby>手<rt>て</rt></ruby>よこ・かた<ruby>手<rt>て</rt></ruby>うえ",
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ combo:'sideUp' }),
     check: (lm)=> comboSideUpCheck(lm)
+  },
+  rightUpLeftLegOut: {
+    label: "みぎ<ruby>手<rt>て</rt></ruby>うえ・ひだり<ruby>足<rt>あし</rt></ruby>よこ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>うえ・ひだり<ruby>足<rt>あし</rt></ruby>よこ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'up', legs:'oneOutLeft' }),
+    check: (lm)=> handUpLegOutCheck(lm,'right')
+  },
+  leftUpRightLegOut: {
+    label: "ひだり<ruby>手<rt>て</rt></ruby>うえ・みぎ<ruby>足<rt>あし</rt></ruby>よこ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>うえ・みぎ<ruby>足<rt>あし</rt></ruby>よこ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'up', legs:'oneOutRight' }),
+    check: (lm)=> handUpLegOutCheck(lm,'left')
+  },
+  rightHandToLeftShoulder: {
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>肩<rt>かた</rt></ruby>をタッチ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>肩<rt>かた</rt></ruby>をタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossShoulder' }),
+    check: (lm)=> wristNearOppositeShoulder(lm,16,11)
+  },
+  leftHandToRightShoulder: {
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>肩<rt>かた</rt></ruby>をタッチ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>肩<rt>かた</rt></ruby>をタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossShoulder' }),
+    check: (lm)=> wristNearOppositeShoulder(lm,15,12)
+  },
+  rightHipCrossLeftSide: {
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>よこ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>よこ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossHip', armLeft:'side' }),
+    check: (lm)=> wristNearOppositeHip(lm,16,23) && !wristAboveShoulder(lm,15) && sideArmCheck(lm,15)
+  },
+  rightHipCrossLeftUp: {
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>うえ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>うえ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossHip', armLeft:'up' }),
+    check: (lm)=> wristNearOppositeHip(lm,16,23) && wristAboveShoulder(lm,15)
+  },
+  leftHipCrossRightSide: {
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>よこ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>よこ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossHip', armRight:'side' }),
+    check: (lm)=> wristNearOppositeHip(lm,15,24) && !wristAboveShoulder(lm,16) && sideArmCheck(lm,16)
+  },
+  leftHipCrossRightUp: {
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>うえ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>うえ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossHip', armRight:'up' }),
+    check: (lm)=> wristNearOppositeHip(lm,15,24) && wristAboveShoulder(lm,16)
   }
 };
-const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp"];
+const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHandToLeftShoulder","leftHandToRightShoulder","rightHipCrossLeftSide","rightHipCrossLeftUp","leftHipCrossRightSide","leftHipCrossRightUp"];
 
 /* ---------- レベル分け(設定画面のショートカット用) ---------- */
 const POSE_LEVELS = {
   easy: ["banzai","armsSide","forward","handsDown"],
-  normal: ["rightHandUp","leftHandUp","squat","legsWide"],
-  hard: ["touchHead","oneLegUp","armsCross","comboSideUp"]
+  normal: ["rightHandUp","leftHandUp","squat","legsWide","rightHandToLeftShoulder","leftHandToRightShoulder"],
+  hard: ["touchHead","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","rightHipCrossLeftUp","leftHipCrossRightSide","leftHipCrossRightUp"]
 };
 
 /* ---------- 判定ヘルパー(正規化座標, y小さいほど上) ---------- */
@@ -638,6 +710,47 @@ function comboSideUpCheck(lm){
   const rightSide = Math.abs(lm[16].y - avgShoulderY) < 0.12;
   return (leftUp && rightSide) || (rightUp && leftSide);
 }
+function handUpLegOutCheck(lm, side){
+  // side:'right'なら「右手あげ+左足よこ」、'left'なら「左手あげ+右足よこ」(コグトレの手足分離運動を想定)
+  if(!lm[15]||!lm[16]||!lm[27]||!lm[28]||!lm[23]||!lm[24]) return false;
+  const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.1;
+  const hipCenterX = (lm[23].x + lm[24].x)/2;
+  if(side === 'right'){
+    // 右手首(16)が上がっている、かつ左足首(27)が腰の中心から外側(左方向)に十分離れている
+    const handOk = wristAboveShoulder(lm,16) && !wristAboveShoulder(lm,15);
+    const legOk = Math.abs(lm[27].x - hipCenterX) > hipWidth * 0.9;
+    return handOk && legOk;
+  }else{
+    // 左手首(15)が上がっている、かつ右足首(28)が腰の中心から外側(右方向)に十分離れている
+    const handOk = wristAboveShoulder(lm,15) && !wristAboveShoulder(lm,16);
+    const legOk = Math.abs(lm[28].x - hipCenterX) > hipWidth * 0.9;
+    return handOk && legOk;
+  }
+}
+function wristNearOppositeShoulder(lm, wristIdx, targetShoulderIdx){
+  // 正中線を越えて反対側の肩にタッチしているかを、手首と肩の距離で判定する
+  if(!lm[wristIdx] || !lm[targetShoulderIdx]) return false;
+  const dx = lm[wristIdx].x - lm[targetShoulderIdx].x;
+  const dy = lm[wristIdx].y - lm[targetShoulderIdx].y;
+  return Math.sqrt(dx*dx+dy*dy) < 0.13;
+}
+function wristNearOppositeHip(lm, wristIdx, targetHipIdx){
+  // 正中線を越えて反対側の腰にタッチしているかを、手首と腰の距離で判定する
+  if(!lm[wristIdx] || !lm[targetHipIdx]) return false;
+  const dx = lm[wristIdx].x - lm[targetHipIdx].x;
+  const dy = lm[wristIdx].y - lm[targetHipIdx].y;
+  return Math.sqrt(dx*dx+dy*dy) < 0.14;
+}
+function sideArmCheck(lm, wristIdx){
+  // 片方の手だけが横に広がっているかの判定(肩の高さ付近・体から十分離れている)
+  const shoulderIdx = wristIdx===15 ? 11 : 12;
+  if(!lm[wristIdx] || !lm[11] || !lm[12] || !lm[shoulderIdx]) return false;
+  const avgShoulderY = (lm[11].y + lm[12].y)/2;
+  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
+  const levelOk = Math.abs(lm[wristIdx].y - avgShoulderY) < 0.12;
+  const farOk = Math.abs(lm[wristIdx].x - lm[shoulderIdx].x) > shoulderWidth * 0.6;
+  return levelOk && farOk;
+}
 
 /* ---------- 棒人間イラスト描画 ---------- */
 function drawStick(ctx,w,h,opt){
@@ -677,6 +790,14 @@ function drawStick(ctx,w,h,opt){
   }else if(opt.legs === 'oneUpRight'){
     ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
     ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.14, hipY + h*0.08); ctx.lineTo(cx + w*0.06, hipY + h*0.10);
+  }else if(opt.legs === 'oneOutLeft'){
+    // 左足(向かって左)を横に大きく開く、右足はまっすぐ
+    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.30, footY);
+    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.11, footY);
+  }else if(opt.legs === 'oneOutRight'){
+    // 右足(向かって右)を横に大きく開く、左足はまっすぐ
+    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
+    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.30, footY);
   }else{
     ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
     ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.11, footY);
@@ -704,6 +825,14 @@ function drawStick(ctx,w,h,opt){
       // 腕組み:反対側まで伸ばす
       ctx.lineTo(cx + sideSign*w*0.06, neckY + h*0.10);
       ctx.lineTo(cx - sideSign*w*0.16, neckY + h*0.16);
+    }else if(mode === 'crossShoulder'){
+      // 反対側の肩にタッチ:正中線を越えて反対の肩の位置まで
+      ctx.lineTo(cx + sideSign*w*0.04, neckY - h*0.02);
+      ctx.lineTo(cx - sideSign*w*0.14, neckY - h*0.02);
+    }else if(mode === 'crossHip'){
+      // 反対側の腰にタッチ:正中線を越えて反対側・腰の高さまで
+      ctx.lineTo(cx + sideSign*w*0.05, hipY - h*0.06);
+      ctx.lineTo(cx - sideSign*w*0.12, hipY - h*0.02);
     }else{
       // down
       ctx.lineTo(cx + sideSign*w*0.14, neckY + h*0.14);
@@ -716,9 +845,16 @@ function drawStick(ctx,w,h,opt){
   else if(opt.arms === 'side'){ arm(-1,'side'); arm(1,'side'); }
   else if(opt.arms === 'forward'){ arm(-1,'forward'); arm(1,'forward'); }
   else if(opt.arms === 'cross'){ arm(-1,'crossToOpposite'); arm(1,'crossToOpposite'); }
+  else if(opt.armRight === 'crossHip' || opt.armLeft === 'crossHip'){
+    // 正中線を越えて腰タッチ+反対の手はよこ/うえ、という左右非対称の複合ポーズ
+    arm(-1, opt.armLeft === 'crossHip' ? 'crossHip' : (opt.armLeft || 'down'));
+    arm(1, opt.armRight === 'crossHip' ? 'crossHip' : (opt.armRight || 'down'));
+  }
   else if(opt.armRight === 'up'){ arm(-1,'down'); arm(1,'up'); }
   else if(opt.armLeft === 'up'){ arm(-1,'up'); arm(1,'down'); }
   else if(opt.armRight === 'headTouch'){ arm(-1,'down'); arm(1,'headTouch'); }
+  else if(opt.armRight === 'crossShoulder'){ arm(-1,'down'); arm(1,'crossShoulder'); }
+  else if(opt.armLeft === 'crossShoulder'){ arm(-1,'crossShoulder'); arm(1,'down'); }
   else if(opt.armRight === 'up' && opt.armLeft === 'side'){ arm(-1,'side'); arm(1,'up'); }
   else if(opt.combo === 'sideUp'){ arm(-1,'side'); arm(1,'up'); }
   else if(opt.pose === 'squat'){ arm(-1,'side'); arm(1,'side'); }
@@ -731,13 +867,13 @@ function drawStick(ctx,w,h,opt){
 const state = {
   settings: {
     selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp"],
-    keepSec: 10,
+    keepSec: 5,
     rounds: 5,
     timeLimitOn: true,
     timeLimitSec: 120,
     demoMode: "illust",
-    afterOkMode: "manual",
-    timeupMode: "manual",
+    afterOkMode: "auto",
+    timeupMode: "auto",
     showSkeleton: true,
     soundOn: true
   },
@@ -763,19 +899,33 @@ function showScreen(id){
 }
 
 /* =========================================================
-   設定画面の構築
+   設定画面の構築(レベル別に見出しを分けて表示)
 ========================================================= */
 const poseChecklistEl = document.getElementById("poseChecklist");
-POSE_ORDER.forEach(key=>{
-  const def = POSE_DEFS[key];
-  const wrap = document.createElement("div");
-  wrap.className = "pose-check checked";
-  wrap.innerHTML = `<input type="checkbox" id="chk_${key}" checked><label for="chk_${key}">${def.ruby}</label>`;
-  poseChecklistEl.appendChild(wrap);
-  const input = wrap.querySelector("input");
-  input.addEventListener("change", ()=>{
-    wrap.classList.toggle("checked", input.checked);
+const LEVEL_HEADINGS = { easy: "やさしい", normal: "ふつう", hard: "ちょいむず" };
+["easy","normal","hard"].forEach(levelKey=>{
+  const block = document.createElement("div");
+  block.className = "pose-level-block";
+  const heading = document.createElement("div");
+  heading.className = "pose-level-heading";
+  heading.textContent = LEVEL_HEADINGS[levelKey];
+  block.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "pose-checklist";
+  POSE_LEVELS[levelKey].forEach(key=>{
+    const def = POSE_DEFS[key];
+    const wrap = document.createElement("div");
+    wrap.className = "pose-check checked";
+    wrap.innerHTML = `<input type="checkbox" id="chk_${key}" checked><label for="chk_${key}">${def.ruby}</label>`;
+    grid.appendChild(wrap);
+    const input = wrap.querySelector("input");
+    input.addEventListener("change", ()=>{
+      wrap.classList.toggle("checked", input.checked);
+    });
   });
+  block.appendChild(grid);
+  poseChecklistEl.appendChild(block);
 });
 
 function collectSettingsFromUI(){
@@ -785,7 +935,7 @@ function collectSettingsFromUI(){
     if(input.checked) selected.push(key);
   });
   state.settings.selectedPoses = selected.length ? selected : [POSE_ORDER[0]];
-  state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 10);
+  state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 5);
   state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 5);
   state.settings.timeLimitOn = document.querySelector('input[name="timeLimitMode"]:checked').value === "on";
   state.settings.timeLimitSec = clampInt(document.getElementById("timeLimitInput").value, 5, 180, 120);
@@ -854,6 +1004,45 @@ document.getElementById("levelEasyBtn").addEventListener("click", ()=> applyLeve
 document.getElementById("levelNormalBtn").addEventListener("click", ()=> applyLevelShortcut("normal"));
 document.getElementById("levelHardBtn").addEventListener("click", ()=> applyLevelShortcut("hard"));
 
+/* ---------- スタート画面のレベル選択 ---------- */
+const startLevelButtons = {
+  easy: document.getElementById("startLevelEasy"),
+  normal: document.getElementById("startLevelNormal"),
+  hard: document.getElementById("startLevelHard")
+};
+let startSelectedLevel = "easy"; // 初期選択は「やさしい」(次のapplyLevelShortcutで実際にチェックも入れる)
+
+// 現在のチェック状態が、いずれかのレベルと完全一致しているかを調べる
+// (設定画面で個別にチェックを変更した場合、どのレベルとも一致しなければnullを返す)
+function detectMatchingLevel(){
+  for(const levelKey of ["easy","normal","hard"]){
+    const targetSet = POSE_LEVELS[levelKey];
+    const currentChecked = POSE_ORDER.filter(key=>{
+      const input = document.getElementById(`chk_${key}`);
+      return input && input.checked;
+    });
+    const sameSize = currentChecked.length === targetSet.length;
+    const sameContent = sameSize && targetSet.every(k=>currentChecked.includes(k));
+    if(sameContent) return levelKey;
+  }
+  return null;
+}
+
+function refreshStartLevelButtons(){
+  Object.entries(startLevelButtons).forEach(([key,btn])=>{
+    btn.classList.toggle("selected", key === startSelectedLevel);
+  });
+}
+Object.entries(startLevelButtons).forEach(([key,btn])=>{
+  btn.addEventListener("click", ()=>{
+    startSelectedLevel = key;
+    applyLevelShortcut(key); // チェックボックスにも反映しておく(設定画面から見ても一致した状態にする)
+    refreshStartLevelButtons();
+  });
+});
+refreshStartLevelButtons();
+applyLevelShortcut(startSelectedLevel); // 起動時の初期状態として「やさしい」をチェックに反映
+
 // 制限時間の on/off で、秒数ステッパーと「キープできなかったときは?」を有効/無効切替
 function refreshTimeLimitUI(){
   const mode = document.querySelector('input[name="timeLimitMode"]:checked').value;
@@ -867,6 +1056,8 @@ refreshTimeLimitUI();
 document.getElementById("btnOpenSettings").addEventListener("click", ()=> showScreen("screen-settings"));
 document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
   collectSettingsFromUI();
+  startSelectedLevel = detectMatchingLevel();
+  refreshStartLevelButtons();
   showScreen("screen-start");
 });
 
@@ -1227,6 +1418,11 @@ function playSound(type){
    ボタンイベント
 ========================================================= */
 document.getElementById("btnStart").addEventListener("click", ()=>{
+  if(startSelectedLevel){
+    applyLevelShortcut(startSelectedLevel);
+  }
+  // startSelectedLevelがnull(個別選択でどのレベルとも一致しない)のときは、
+  // 設定画面で選んだチェック状態をそのまま使う
   startActivity();
   startRoundTimer();
 });
