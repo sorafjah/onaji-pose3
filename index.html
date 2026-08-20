@@ -726,11 +726,20 @@ function isSquatting(lm){
   return (hipToKnee / legLen) > 0.62;
 }
 function handsOnOwnShoulders(lm){
-  // 肩に手を置く:左手首が自分の左肩、右手首が自分の右肩の近くにあるか(交差しない、同じ側どうし)
+  // 肩に手を置く:手首が自分の肩の近く(横方向)にあり、肩の高さかそれより上にあればOK
+  // (腕が肩の真上あたりに来ていても成立するよう、下方向より上方向の許容を広くする)
   if(!lm[15]||!lm[16]||!lm[11]||!lm[12]) return false;
-  const leftOk = distanceOf(lm[15], lm[11]) < 0.13;
-  const rightOk = distanceOf(lm[16], lm[12]) < 0.13;
+  const leftOk = nearShoulderAllowingAbove(lm[15], lm[11]);
+  const rightOk = nearShoulderAllowingAbove(lm[16], lm[12]);
   return leftOk && rightOk;
+}
+function nearShoulderAllowingAbove(wrist, shoulder){
+  const dx = wrist.x - shoulder.x;
+  const dy = wrist.y - shoulder.y;
+  const horizontalOk = Math.abs(dx) < 0.15;
+  // 肩より上(dyが負)は広めに許容、肩より下はこれまで通り狭めに許容
+  const verticalOk = dy < 0 ? (dy > -0.22) : (dy < 0.13);
+  return horizontalOk && verticalOk;
 }
 function distanceOf(a, b){
   const dx = a.x - b.x;
@@ -840,10 +849,14 @@ function drawStick(ctx,w,h,opt){
     bodyTop = neckY; bodyBottom = hipY;
   }
 
-  // 頭
+  // 頭(白丸・輪郭は本体と同じ青)
   ctx.beginPath();
-  ctx.arc(cx, headY, h*0.09, 0, Math.PI*2);
+  ctx.arc(cx, headY, h*0.072, 0, Math.PI*2);
+  ctx.fillStyle = "#ffffff";
   ctx.fill();
+  ctx.lineWidth = 7;
+  ctx.stroke();
+  ctx.fillStyle = "#4a90d9";
 
   // 胴体
   ctx.beginPath();
@@ -851,10 +864,8 @@ function drawStick(ctx,w,h,opt){
   ctx.lineTo(cx, bodyBottom);
   ctx.stroke();
 
-  // 肩・腰のめじるし(横線)。腕・脚はこの横線の両端から生える
+  // 肩・腰のめじるし(横線)。腕・脚はこの横線の両端から生える。太さは他の線と統一
   const markerWidth = w*0.16;
-  const prevLineWidth = ctx.lineWidth;
-  ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(cx - markerWidth, neckY);
   ctx.lineTo(cx + markerWidth, neckY);
@@ -863,7 +874,6 @@ function drawStick(ctx,w,h,opt){
   ctx.moveTo(cx - markerWidth, hipY);
   ctx.lineTo(cx + markerWidth, hipY);
   ctx.stroke();
-  ctx.lineWidth = prevLineWidth;
 
   // 脚(肩と同様、腰の横線の両端から生える)
   ctx.beginPath();
@@ -1345,6 +1355,14 @@ function loadCurrentPose(){
   feedbackBanner.innerHTML = "つぎのポーズをみてね";
   progressPill.textContent = `${state.currentIndex+1} / ${state.sequence.length}`;
 
+  // お手本(イラスト・カメラ重ねガイド)はカウントダウンが終わってから表示する
+  demoPoseName.innerHTML = "";
+  document.getElementById("demoPane").style.display = "none";
+
+  runCountdownThenReveal();
+}
+
+function revealCurrentPoseDemo(){
   const key = state.sequence[state.currentIndex];
   const def = POSE_DEFS[key];
   demoPoseName.innerHTML = def.ruby;
@@ -1354,8 +1372,6 @@ function loadCurrentPose(){
   }else{
     demoPane_showOverlayGuide();
   }
-
-  runCountdownThenReveal();
 }
 
 /* ---------- カウントダウン(3・2・1)してからポーズ判定を開始する ---------- */
@@ -1381,6 +1397,7 @@ function runCountdownThenReveal(){
     }else{
       overlay.classList.remove("active");
       state.isCountingDown = false;
+      revealCurrentPoseDemo();
       feedbackBanner.className = "feedback-banner wait";
       feedbackBanner.innerHTML = "おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね";
       startRoundTimer();
