@@ -406,7 +406,7 @@
         <span class="setting-label">なんかい<ruby>出<rt>だ</rt></ruby>す?</span>
         <div class="stepper">
           <button id="roundsMinus">▽</button>
-          <input type="number" id="roundsInput" value="8" min="1" max="20" inputmode="numeric">
+          <input type="number" id="roundsInput" value="10" min="1" max="20" inputmode="numeric">
           <span class="unit">かい</span>
           <button id="roundsPlus">△</button>
         </div>
@@ -416,8 +416,8 @@
         <span class="setting-label"><ruby>出<rt>だ</rt></ruby>す<ruby>順番<rt>じゅんばん</rt></ruby></span>
         <div class="setting-desc">「<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に」は、チェックした<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>を<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に、くり<ruby>返<rt>かえ</rt></ruby>し<ruby>出<rt>だ</rt></ruby>します</div>
         <div class="radio-row" id="orderModeRow">
-          <div class="radio-chip" data-value="random"><input type="radio" name="orderMode" id="orderRandom" value="random" checked><label for="orderRandom">ランダム</label></div>
-          <div class="radio-chip" data-value="sequential"><input type="radio" name="orderMode" id="orderSequential" value="sequential"><label for="orderSequential"><ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に</label></div>
+          <div class="radio-chip" data-value="random"><input type="radio" name="orderMode" id="orderRandom" value="random"><label for="orderRandom">ランダム</label></div>
+          <div class="radio-chip" data-value="sequential"><input type="radio" name="orderMode" id="orderSequential" value="sequential" checked><label for="orderSequential"><ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に</label></div>
         </div>
       </div>
 
@@ -795,28 +795,25 @@ function handsDownCheck(lm){
   return nearHipLeft && nearHipRight && withinBodyLeft && withinBodyRight;
 }
 function oneLegDiagonalUp(lm, side){
-  // 片足を斜め外側に上げているかを判定する(添付画像のような、軸足はまっすぐ・
-  // もう片方は外側やや上に浮かせる動き)。
-  // 横方向に外側へ開いていること、かつ足首が接地しているときより上がっていることを見る。
+  // 片足を斜め外側に上げているかを判定する(軸足はまっすぐ・もう片方は外側やや上に浮かせる動き)。
+  // 「上げた足の足首が、軸足の足首よりはっきり高い位置にある」ことを主条件にすると、
+  // 体格やカメラの距離に左右されず安定して判定できる。
   if(!lm[27]||!lm[28]||!lm[23]||!lm[24]) return false;
   const hipCenterX = (lm[23].x + lm[24].x)/2;
   const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.1;
-  const hipY = (lm[23].y + lm[24].y)/2;
 
-  function raisedLegCheck(ankle, otherAnkle, outwardSign){
-    // 外側方向にある程度離れているか(真横に大きく開くほどではなく、斜めの動きを想定して緩め)
-    const outward = (ankle.x - hipCenterX) * outwardSign > hipWidth * 0.5;
-    // 足首が浮いているか(腰との高さの差が、地面についている時より小さい=上がっている)
-    const raised = (ankle.y - hipY) < hipWidth * 3.2;
-    // もう片方の足首はあまり動いていない(軸足として残っている)
-    const otherStill = Math.abs(otherAnkle.x - hipCenterX) < hipWidth * 0.9;
-    return outward && raised && otherStill;
+  function diagonalCheck(ankle, otherAnkle, outwardSign){
+    // (1) 上げた足首が、軸足の足首よりはっきり高い(y座標が小さい)
+    const higherThanOther = ankle.y < otherAnkle.y - 0.04;
+    // (2) 外側方向に開いている(斜めの動きなので、真横ほどではない緩めの基準)
+    const outward = (ankle.x - hipCenterX) * outwardSign > hipWidth * 0.4;
+    return higherThanOther && outward;
   }
 
   if(side === 'left'){
-    return raisedLegCheck(lm[27], lm[28], -1);
+    return diagonalCheck(lm[27], lm[28], -1);
   }else{
-    return raisedLegCheck(lm[28], lm[27], 1);
+    return diagonalCheck(lm[28], lm[27], 1);
   }
 }
 function oneLegRaised(lm, side){
@@ -982,13 +979,13 @@ function drawStick(ctx,w,h,opt){
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.32, footY);
   }else if(opt.legs === 'diagonalUpLeft'){
-    // 左足をななめ外側に上げる(添付画像のイメージ:軸足はまっすぐ、もう片方は外側やや上に浮かせる)
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.24, hipY + h*0.14); ctx.lineTo(cx - w*0.34, hipY + h*0.10);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
+    // 左足をななめ外側にまっすぐ上げる(軸足は垂直)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.34, hipY + h*0.12);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + markerWidth, footY);
   }else if(opt.legs === 'diagonalUpRight'){
-    // 右足をななめ外側に上げる(添付画像のイメージ:軸足はまっすぐ、もう片方は外側やや上に浮かせる)
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.24, hipY + h*0.14); ctx.lineTo(cx + w*0.34, hipY + h*0.10);
+    // 右足をななめ外側にまっすぐ上げる(軸足は垂直)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - markerWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.34, hipY + h*0.12);
   }else{
     // まっすぐ立っている状態(気をつけ・何もしていないときなど):腰より少し外側へ広げて、脚がくっつかないように
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
@@ -1083,8 +1080,8 @@ const state = {
   settings: {
     selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp"],
     keepSec: 3,
-    rounds: 8,
-    orderMode: "random",
+    rounds: 10,
+    orderMode: "sequential",
     timeLimitOn: true,
     timeLimitSec: 60,
     demoMode: "illust",
@@ -1153,7 +1150,7 @@ function collectSettingsFromUI(){
   });
   state.settings.selectedPoses = selected.length ? selected : [POSE_ORDER[0]];
   state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 3);
-  state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 8);
+  state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 10);
   state.settings.orderMode = document.querySelector('input[name="orderMode"]:checked').value;
   state.settings.timeLimitOn = document.querySelector('input[name="timeLimitMode"]:checked').value === "on";
   state.settings.timeLimitSec = clampInt(document.getElementById("timeLimitInput").value, 5, 180, 60);
