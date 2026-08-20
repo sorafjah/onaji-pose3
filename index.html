@@ -397,6 +397,15 @@
       </div>
 
       <div class="setting-group">
+        <span class="setting-label"><ruby>出<rt>だ</rt></ruby>す<ruby>順番<rt>じゅんばん</rt></ruby></span>
+        <div class="setting-desc">「せんたくした<ruby>順<rt>じゅん</rt></ruby>」は、チェックした<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>を<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に、くり<ruby>返<rt>かえ</rt></ruby>し<ruby>出<rt>だ</rt></ruby>します</div>
+        <div class="radio-row" id="orderModeRow">
+          <div class="radio-chip" data-value="random"><input type="radio" name="orderMode" id="orderRandom" value="random" checked><label for="orderRandom">ランダム</label></div>
+          <div class="radio-chip" data-value="sequential"><input type="radio" name="orderMode" id="orderSequential" value="sequential"><label for="orderSequential">せんたくした<ruby>順<rt>じゅん</rt></ruby></label></div>
+        </div>
+      </div>
+
+      <div class="setting-group">
         <span class="setting-label">1かいあたりの<ruby>制<rt>せい</rt></ruby><ruby>限<rt>げん</rt></ruby><ruby>時<rt>じ</rt></ruby><ruby>間<rt>かん</rt></ruby></span>
         <div class="setting-desc">できなくても<ruby>次<rt>つぎ</rt></ruby>に<ruby>進<rt>すす</rt></ruby>むまでの、まちじかん</div>
         <div class="radio-row" id="timeLimitModeRow" style="margin-bottom:10px;">
@@ -592,12 +601,6 @@ const POSE_DEFS = {
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ arms:'vShape' }),
     check: (lm)=> wristsAboveShouldersAndWide(lm)
   },
-  touchHead: {
-    label: "<ruby>頭<rt>あたま</rt></ruby>にタッチ",
-    ruby: "<ruby>頭<rt>あたま</rt></ruby>にタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'headTouch' }),
-    check: (lm)=> wristNearHead(lm,15) || wristNearHead(lm,16)
-  },
   squat: {
     label: "しゃがむ",
     ruby: "しゃがむ",
@@ -671,25 +674,25 @@ const POSE_DEFS = {
     check: (lm)=> wristNearOppositeHip(lm,15,24)
   },
   rightKneeCrossLeft: {
-    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>膝<rt>ひざ</rt></ruby>タッチ",
-    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>膝<rt>ひざ</rt></ruby>タッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossKnee', legs:'oneUpLeft' }),
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだりひざタッチ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだりひざタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossKnee', legs:'kneeBentLeft' }),
     check: (lm)=> wristNearOppositeKnee(lm,16,25)
   },
   leftKneeCrossRight: {
-    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>膝<rt>ひざ</rt></ruby>タッチ",
-    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>膝<rt>ひざ</rt></ruby>タッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossKnee', legs:'oneUpRight' }),
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎひざタッチ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎひざタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossKnee', legs:'kneeBentRight' }),
     check: (lm)=> wristNearOppositeKnee(lm,15,26)
   }
 };
-const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
+const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
 
 /* ---------- レベル分け(設定画面のショートカット用) ---------- */
 const POSE_LEVELS = {
   easy: ["banzai","armsSide","forward","handsDown"],
   normal: ["rightHandUp","leftHandUp","squat","legsWideLeft","legsWideRight"],
-  hard: ["touchHead","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"]
+  hard: ["oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"]
 };
 
 /* ---------- 判定ヘルパー(正規化座標, y小さいほど上) ---------- */
@@ -729,12 +732,6 @@ function wristsAboveShouldersAndWide(lm){
   // バンザイ(手が体の近くでまっすぐ上)と区別するため、横の開きも必要
   const wideOk = Math.abs(lm[15].x - lm[16].x) > shoulderWidth * 1.4;
   return aboveOk && wideOk;
-}
-function wristNearHead(lm, wristIdx){
-  if(!lm[wristIdx] || !lm[0]) return false;
-  const dx = lm[wristIdx].x - lm[0].x;
-  const dy = lm[wristIdx].y - lm[0].y;
-  return Math.sqrt(dx*dx+dy*dy) < 0.14;
 }
 function isSquatting(lm){
   // スクワットのように腰を落としているかを判定する。
@@ -861,21 +858,14 @@ function wristNearOppositeHip(lm, wristIdx, targetHipIdx){
 }
 function wristNearOppositeKnee(lm, wristIdx, targetKneeIdx){
   // 正中線を越えて反対側のひざにタッチしているかを判定する。
-  // 「タッチできていること」を主条件にし、ひざが持ち上がっていることは補助的な条件として緩めに扱う。
+  // ひざを上げているかどうかは問わず、手とひざが触れ合っていることだけを見る。
   if(!lm[wristIdx] || !lm[targetKneeIdx] || !lm[23] || !lm[24]) return false;
 
-  const hipY = (lm[23].y + lm[24].y)/2;
   const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.08;
 
-  // タッチ判定:手首とひざの距離が十分近いか(広めの許容)
   const dx = lm[wristIdx].x - lm[targetKneeIdx].x;
   const dy = lm[wristIdx].y - lm[targetKneeIdx].y;
-  const touchOk = Math.sqrt(dx*dx + dy*dy) < hipWidth * 1.3;
-
-  // 補助条件:ひざが腰にある程度近づいている(少しでも持ち上がっていればOKという緩い基準)
-  const kneeRaisedOk = (lm[targetKneeIdx].y - hipY) < hipWidth * 3.0;
-
-  return touchOk && kneeRaisedOk;
+  return Math.sqrt(dx*dx + dy*dy) < hipWidth * 1.3;
 }
 /* ---------- 棒人間イラスト描画 ---------- */
 function drawStick(ctx,w,h,opt){
@@ -937,6 +927,14 @@ function drawStick(ctx,w,h,opt){
   }else if(opt.legs === 'oneUpLeft'){
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.14, hipY + h*0.08); ctx.lineTo(cx - w*0.06, hipY + h*0.10);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
+  }else if(opt.legs === 'kneeBentLeft'){
+    // 左ひざを軽く曲げる(ひざタッチのお手本用。高く上げすぎない控えめな曲げ方)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.10, hipY + h*0.14); ctx.lineTo(cx - w*0.05, hipY + h*0.20);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
+  }else if(opt.legs === 'kneeBentRight'){
+    // 右ひざを軽く曲げる(ひざタッチのお手本用。高く上げすぎない控えめな曲げ方)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.10, hipY + h*0.14); ctx.lineTo(cx + w*0.05, hipY + h*0.20);
   }else if(opt.legs === 'oneOutLeft'){
     // 左足(向かって左)を横に大きく開く、右足はまっすぐ
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.32, footY);
@@ -997,9 +995,9 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX - sideSign*w*0.10, hipY - h*0.10);
       ctx.lineTo(cx - sideSign*markerWidth, hipY);
     }else if(mode === 'crossKnee'){
-      // 反対側の(持ち上がった)ひざにタッチ:正中線を越えて、体の中心付近・ひざの高さまで下ろす
-      ctx.lineTo(startX - sideSign*w*0.06, hipY + h*0.02);
-      ctx.lineTo(cx - sideSign*w*0.04, hipY + h*0.10);
+      // 反対側の(軽く曲げた)ひざに向かって、手を伸ばそうとしている(触れていなくてもよい)
+      ctx.lineTo(startX - sideSign*w*0.05, hipY + h*0.06);
+      ctx.lineTo(cx - sideSign*w*0.02, hipY + h*0.16);
     }else{
       // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
       ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
@@ -1037,9 +1035,10 @@ function drawStick(ctx,w,h,opt){
 ========================================================= */
 const state = {
   settings: {
-    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp"],
+    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp"],
     keepSec: 3,
     rounds: 8,
+    orderMode: "random",
     timeLimitOn: true,
     timeLimitSec: 60,
     demoMode: "illust",
@@ -1109,6 +1108,7 @@ function collectSettingsFromUI(){
   state.settings.selectedPoses = selected.length ? selected : [POSE_ORDER[0]];
   state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 3);
   state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 8);
+  state.settings.orderMode = document.querySelector('input[name="orderMode"]:checked').value;
   state.settings.timeLimitOn = document.querySelector('input[name="timeLimitMode"]:checked').value === "on";
   state.settings.timeLimitSec = clampInt(document.getElementById("timeLimitInput").value, 5, 180, 60);
   state.settings.demoMode = document.querySelector('input[name="demoMode"]:checked').value;
@@ -1162,6 +1162,7 @@ setupRadioRow("demoModeRow");
 setupRadioRow("afterOkRow");
 setupRadioRow("timeupModeRow");
 setupRadioRow("timeLimitModeRow");
+setupRadioRow("orderModeRow");
 
 // レベルボタン:押すとそのレベルのポーズにまとめてチェックを入れる(ショートカット。個別変更は引き続き可能)
 function applyLevelShortcut(levelKey){
@@ -1407,8 +1408,16 @@ function startDetectionLoop(){
 function buildSequence(){
   const pool = state.settings.selectedPoses;
   const seq = [];
-  for(let i=0;i<state.settings.rounds;i++){
-    seq.push(pool[Math.floor(Math.random()*pool.length)]);
+  if(state.settings.orderMode === "sequential"){
+    // 選んだポーズを、チェックした順(POSE_ORDER基準の並び)に繰り返し出す
+    for(let i=0;i<state.settings.rounds;i++){
+      seq.push(pool[i % pool.length]);
+    }
+  }else{
+    // ランダムに出す
+    for(let i=0;i<state.settings.rounds;i++){
+      seq.push(pool[Math.floor(Math.random()*pool.length)]);
+    }
   }
   return seq;
 }
