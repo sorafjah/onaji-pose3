@@ -646,15 +646,21 @@ const POSE_DEFS = {
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneOutRight' }),
     check: (lm)=> oneLegOutToSide(lm,'right')
   },
-  oneLegUp: {
-    label: "<ruby>片<rt>かた</rt></ruby><ruby>足<rt>あし</rt></ruby>をあげる",
-    ruby: "<ruby>片<rt>かた</rt></ruby><ruby>足<rt>あし</rt></ruby>をあげる",
+  rightLegUp: {
+    label: "みぎ<ruby>足<rt>あし</rt></ruby>をあげる",
+    ruby: "みぎ<ruby>足<rt>あし</rt></ruby>をあげる",
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneUpRight' }),
-    check: (lm)=> oneLegRaised(lm)
+    check: (lm)=> oneLegRaised(lm,'right')
+  },
+  leftLegUp: {
+    label: "ひだり<ruby>足<rt>あし</rt></ruby>をあげる",
+    ruby: "ひだり<ruby>足<rt>あし</rt></ruby>をあげる",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneUpLeft' }),
+    check: (lm)=> oneLegRaised(lm,'left')
   },
   armsCross: {
-    label: "<ruby>腕<rt>うで</rt></ruby>を<ruby>組<rt>く</rt></ruby>む",
-    ruby: "<ruby>腕<rt>うで</rt></ruby>を<ruby>組<rt>く</rt></ruby>む",
+    label: "うでをクロスに",
+    ruby: "うでをクロスに",
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ arms:'cross' }),
     check: (lm)=> armsCrossed(lm)
   },
@@ -701,13 +707,13 @@ const POSE_DEFS = {
     check: (lm)=> wristNearOppositeKnee(lm,15,26)
   }
 };
-const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
+const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
 
 /* ---------- レベル分け(設定画面のショートカット用) ---------- */
 const POSE_LEVELS = {
   easy: ["banzai","armsSide","forward","handsDown"],
   normal: ["rightHandUp","leftHandUp","squat","legsWideLeft","legsWideRight"],
-  hard: ["oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"]
+  hard: ["rightLegUp","leftLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"]
 };
 
 /* ---------- 判定ヘルパー(正規化座標, y小さいほど上) ---------- */
@@ -761,8 +767,8 @@ function isSquatting(lm){
   const ankleToKnee = Math.max(0.03, ankleY - kneeY); // 足首〜ひざの高さ(基準)
   const ankleToHip = ankleY - hipY; // 足首〜腰の高さ
 
-  // 「足首〜腰」が「足首〜ひざ」の1.75倍未満まで腰が下がっていればオッケー
-  return ankleToHip < ankleToKnee * 1.75;
+  // 「足首〜腰」が「足首〜ひざ」の1.8倍未満まで腰が下がっていればオッケー
+  return ankleToHip < ankleToKnee * 1.8;
 }
 function handsOnOwnEars(lm){
   // 両手で耳をタッチ:左手首が自分の左耳(7)、右手首が自分の右耳(8)の近くにあるか
@@ -804,24 +810,24 @@ function oneLegOutToSide(lm, side){
     return rightLegOut && leftLegNear;
   }
 }
-function oneLegRaised(lm){
-  // 片足を上げているかを判定する。以下のどちらかを満たせばOK(緩めの判定):
+function oneLegRaised(lm, side){
+  // 指定した片足だけを上げているかを判定する。以下のどちらかを満たせばOK(緩めの判定):
   //  (a) 足首が、自分の膝の高さ程度まで上がっている
   //  (b) 膝が、腰の高さ程度まで上がっている(太もも全体を持ち上げる動き)
   if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
   const hipY = (lm[23].y + lm[24].y)/2;
 
   function oneSideRaised(ankleY, kneeY){
-    // (a) 足首が、立っているときの膝の高さくらいまで上がっている
     const ankleNearKnee = ankleY < kneeY + 0.06;
-    // (b) 膝が、腰の高さくらいまで上がっている
     const kneeNearHip = kneeY < hipY + 0.10;
     return ankleNearKnee || kneeNearHip;
   }
 
-  const leftUp = oneSideRaised(lm[27].y, lm[25].y);
-  const rightUp = oneSideRaised(lm[28].y, lm[26].y);
-  return leftUp || rightUp;
+  if(side === 'left'){
+    return oneSideRaised(lm[27].y, lm[25].y);
+  }else{
+    return oneSideRaised(lm[28].y, lm[26].y);
+  }
 }
 function armsCrossed(lm){
   // 左手首が体の右側、右手首が体の左側(x座標が入れ替わっている)
@@ -943,10 +949,12 @@ function drawStick(ctx,w,h,opt){
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.24, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.24, footY);
   }else if(opt.legs === 'oneUpRight'){
+    // 右足を軽く上げる(添付画像のイメージ:軸足はまっすぐ、上げた足はひざを軽く曲げて浮かせる程度)
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.14, hipY + h*0.08); ctx.lineTo(cx + w*0.06, hipY + h*0.10);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.15, hipY + h*0.16); ctx.lineTo(cx + w*0.20, hipY + h*0.14);
   }else if(opt.legs === 'oneUpLeft'){
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.14, hipY + h*0.08); ctx.lineTo(cx - w*0.06, hipY + h*0.10);
+    // 左足を軽く上げる(添付画像のイメージ:軸足はまっすぐ、上げた足はひざを軽く曲げて浮かせる程度)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.15, hipY + h*0.16); ctx.lineTo(cx - w*0.20, hipY + h*0.14);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
   }else if(opt.legs === 'kneeBentLeft'){
     // 左ひざを軽く曲げる(ひざタッチのお手本用。高く上げすぎない控えめな曲げ方)
@@ -1056,7 +1064,7 @@ function drawStick(ctx,w,h,opt){
 ========================================================= */
 const state = {
   settings: {
-    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp"],
+    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp"],
     keepSec: 3,
     rounds: 8,
     orderMode: "random",
