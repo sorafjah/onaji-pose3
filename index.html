@@ -795,33 +795,26 @@ function handsDownCheck(lm){
   return nearHipLeft && nearHipRight && withinBodyLeft && withinBodyRight;
 }
 function oneLegDiagonalUp(lm, side){
-  // 片足を斜め外側に上げているかを判定する(軸足はまっすぐ・もう片方は外側やや上に浮かせる動き)。
-  // 「上げた足の足首〜腰の距離」が「軸足の足首〜腰の距離」と比べてどれだけ縮んでいるか、
-  // という相対的な比率で見る(体格やカメラ距離の影響を受けにくい)。
-  if(!lm[27]||!lm[28]||!lm[23]||!lm[24]) return false;
+  // 片足を斜め外側に上げているかを判定する。
+  // 「上げた足の足首が、軸足のひざより高い位置に来ているか」というシンプルな基準にする
+  // (体格やカメラ距離の影響を受けにくく、確実に反応する)。
+  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
   const hipCenterX = (lm[23].x + lm[24].x)/2;
-  const hipCenterY = (lm[23].y + lm[24].y)/2;
 
-  function distFromHip(ankle){
-    const dx = ankle.x - hipCenterX;
-    const dy = ankle.y - hipCenterY;
-    return Math.sqrt(dx*dx + dy*dy);
-  }
-
-  function diagonalCheck(ankle, otherAnkle, outwardSign){
-    const raisedDist = distFromHip(ankle);
-    const axisDist = Math.max(0.05, distFromHip(otherAnkle));
-    // 上げた足の腰からの距離が、軸足の腰からの距離より明確に縮んでいれば「上がっている」とみなす
-    const raisedOk = raisedDist < axisDist * 0.9;
+  function diagonalCheck(ankle, axisKnee, outwardSign){
+    // 上げた足の足首が、軸足のひざより高い(y座標が小さい)
+    const higherThanAxisKnee = ankle.y < axisKnee.y;
     // 外側方向に開いているか(緩めの基準。正中線をわずかでも外側に越えていればOK)
     const outward = (ankle.x - hipCenterX) * outwardSign > 0;
-    return raisedOk && outward;
+    return higherThanAxisKnee && outward;
   }
 
   if(side === 'left'){
-    return diagonalCheck(lm[27], lm[28], -1);
+    // 左足(27)を上げる。軸足は右足なので右ひざ(26)が基準
+    return diagonalCheck(lm[27], lm[26], -1);
   }else{
-    return diagonalCheck(lm[28], lm[27], 1);
+    // 右足(28)を上げる。軸足は左足なので左ひざ(25)が基準
+    return diagonalCheck(lm[28], lm[25], 1);
   }
 }
 function oneLegRaised(lm, side){
