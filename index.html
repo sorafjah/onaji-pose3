@@ -226,7 +226,7 @@
   .demo-pane{
     flex:0 0 220px; display:flex; flex-direction:column; align-items:center; justify-content:center;
     background:#fff; border-radius:20px; box-shadow:0 4px 14px rgba(0,0,0,.1);
-    padding:12px; gap:8px;
+    padding:12px; gap:8px; box-sizing:border-box;
   }
   .demo-pane .demo-title{ font-size:15px; color:var(--sub); font-weight:700; }
   #demoCanvas{ width:170px; height:170px; }
@@ -321,8 +321,8 @@
   .result-list .mark{ font-size:20px; width:26px; text-align:center; }
 
   @media (max-width:600px){
-    .stage-wrap{ flex-direction:column; align-items:center; }
-    .demo-pane{ flex:0 0 auto; width:100%; max-width:340px; flex-direction:row; justify-content:center; }
+    .stage-wrap{ flex-direction:column; align-items:stretch; }
+    .demo-pane{ flex:0 0 auto; width:100%; max-width:340px; margin:0 auto; flex-direction:row; justify-content:center; }
     #demoCanvas{ width:130px; height:130px; }
     .camera-pane{ max-width:100%; }
   }
@@ -713,17 +713,19 @@ function wristNearHead(lm, wristIdx){
   return Math.sqrt(dx*dx+dy*dy) < 0.14;
 }
 function isSquatting(lm){
-  // スクワットのように腰を落としているかを、膝の高さで判定する
-  // (肩と腰の距離だけで見ると前傾姿勢でも成立してしまうため、膝の曲がりを見る)
-  if(!lm[23]||!lm[24]||!lm[25]||!lm[26]||!lm[27]||!lm[28]) return false;
+  // スクワットのように腰を落としているかを判定する。
+  // 上半身を前に傾けなくても成立するよう、「腰から足首までの縦の距離」が
+  // 「腰から肩までの距離(上半身の長さ)」と比べてどれだけ縮んでいるかで見る。
+  // (膝が曲がって腰が下がるほど、腰〜足首の縦距離が短くなる)
+  if(!lm[11]||!lm[12]||!lm[23]||!lm[24]||!lm[27]||!lm[28]) return false;
+  const shoulderY = (lm[11].y + lm[12].y)/2;
   const hipY = (lm[23].y + lm[24].y)/2;
-  const kneeY = (lm[25].y + lm[26].y)/2;
   const ankleY = (lm[27].y + lm[28].y)/2;
-  // 腰〜足首の距離のうち、腰〜膝が占める割合が大きいほど深く曲がっている
-  // (立っているときは腰が高く膝までの距離が短い。しゃがむと腰が下がり膝までの距離が伸びる)
-  const legLen = Math.max(0.05, ankleY - hipY);
-  const hipToKnee = kneeY - hipY;
-  return (hipToKnee / legLen) > 0.62;
+  const torsoLen = Math.max(0.05, hipY - shoulderY); // 上半身の長さ(基準の目安)
+  const hipToAnkle = ankleY - hipY; // 腰〜足首の縦距離(まっすぐ立っているときが最大)
+  // まっすぐ立っているとき、hipToAnkleは概ねtorsoLenの1.6〜2倍程度になることが多いので、
+  // それより明確に縮んでいれば、腰を落としている(しゃがんでいる)とみなす
+  return hipToAnkle < torsoLen * 1.25;
 }
 function handsOnOwnShoulders(lm){
   // 肩に手を置く:手首が自分の肩の近く(横方向)にあり、肩の高さかそれより上にあればOK
@@ -845,8 +847,10 @@ function drawStick(ctx,w,h,opt){
   let bodyTop = neckY, bodyBottom = hipY;
 
   if(opt.pose === 'squat'){
-    headY = h*0.42; neckY = h*0.50; hipY = h*0.62; footY = h*0.88;
-    bodyTop = neckY; bodyBottom = hipY;
+    // 上半身の長さ・向きは変えず、腰(hipY)を下げることでしゃがんだ見た目にする
+    hipY = h*0.72;
+    footY = h*0.88;
+    bodyBottom = hipY;
   }
 
   // 頭(白丸・輪郭は本体と同じ青)
@@ -865,7 +869,8 @@ function drawStick(ctx,w,h,opt){
   ctx.stroke();
 
   // 肩・腰のめじるし(横線)。腕・脚はこの横線の両端から生える。太さは他の線と統一
-  const markerWidth = w*0.16;
+  const markerWidth = w*0.11; // 肩幅・腰幅(狭めに)
+  const legStanceWidth = w*0.16; // まっすぐ立つときの足先の間隔(肩幅より少し広く、脚がくっつかないように)
   ctx.beginPath();
   ctx.moveTo(cx - markerWidth, neckY);
   ctx.lineTo(cx + markerWidth, neckY);
@@ -878,25 +883,27 @@ function drawStick(ctx,w,h,opt){
   // 脚(肩と同様、腰の横線の両端から生える)
   ctx.beginPath();
   if(opt.pose === 'squat'){
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.16, hipY + h*0.10); ctx.lineTo(cx - w*0.14, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.16, hipY + h*0.10); ctx.lineTo(cx + w*0.14, footY);
+    // 腰を落として膝が曲がった、まっすぐな両足のスクワット姿勢(脚が交差しないように)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth - w*0.02, hipY + h*0.06); ctx.lineTo(cx - legStanceWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth + w*0.02, hipY + h*0.06); ctx.lineTo(cx + legStanceWidth, footY);
   }else if(opt.legs === 'wide'){
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.22, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.22, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.24, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.24, footY);
   }else if(opt.legs === 'oneUpRight'){
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.14, hipY + h*0.08); ctx.lineTo(cx + w*0.06, hipY + h*0.10);
   }else if(opt.legs === 'oneOutLeft'){
     // 左足(向かって左)を横に大きく開く、右足はまっすぐ
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.30, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.11, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.32, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
   }else if(opt.legs === 'oneOutRight'){
     // 右足(向かって右)を横に大きく開く、左足はまっすぐ
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.30, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.32, footY);
   }else{
-    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
-    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.11, footY);
+    // まっすぐ立っている状態(気をつけ・何もしていないときなど):腰より少し外側へ広げて、脚がくっつかないように
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
   }
   ctx.stroke();
 
@@ -913,9 +920,9 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX + sideSign*w*0.14, neckY);
       ctx.lineTo(startX + sideSign*w*0.26, neckY);
     }else if(mode === 'shoulderTouch'){
-      // 自分の肩に手を置く:同じ側の肩の位置まで、ひじを軽く曲げて触れる短い動き
-      ctx.lineTo(startX + sideSign*w*0.03, neckY - h*0.09);
-      ctx.lineTo(startX - sideSign*w*0.01, neckY - h*0.01);
+      // 自分の肩に手を置く:ひじを横に張り出してしっかり曲げ、手が自分の肩に届く
+      ctx.lineTo(startX + sideSign*w*0.16, neckY - h*0.05);
+      ctx.lineTo(startX, neckY - h*0.01);
     }else if(mode === 'headTouch'){
       ctx.lineTo(startX - sideSign*w*0.02, neckY - h*0.10);
       ctx.lineTo(cx + sideSign*w*0.06, headY);
@@ -932,9 +939,9 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX - sideSign*w*0.06, hipY - h*0.06);
       ctx.lineTo(cx - sideSign*w*0.10, hipY - h*0.02);
     }else{
-      // down
-      ctx.lineTo(startX + sideSign*w*0.05, neckY + h*0.14);
-      ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.24);
+      // down(気をつけ・何もしていないとき):肩の真下へまっすぐ伸ばす
+      ctx.lineTo(startX, neckY + h*0.14);
+      ctx.lineTo(startX, neckY + h*0.28);
     }
     ctx.stroke();
   }
@@ -1229,7 +1236,22 @@ function stopCamera(){
 function resizeOverlay(){
   overlay.width = video.videoWidth || 640;
   overlay.height = video.videoHeight || 480;
+  syncDemoPaneHeight();
 }
+
+/* ---------- 映像の高さと、お手本の白い枠の高さをそろえる ---------- */
+function syncDemoPaneHeight(){
+  const cameraPane = document.querySelector(".camera-pane");
+  const demoPane = document.getElementById("demoPane");
+  if(!cameraPane || !demoPane) return;
+  const isStacked = window.matchMedia("(max-width:600px)").matches;
+  if(isStacked){
+    demoPane.style.height = ""; // 縦積み時は高さ指定をリセット(中身に応じた高さでよい)
+  }else{
+    demoPane.style.height = `${cameraPane.offsetHeight}px`;
+  }
+}
+window.addEventListener("resize", syncDemoPaneHeight);
 
 /* ---------- ランドマーク描画(骨格ライン) ---------- */
 const POSE_CONNECTIONS = [
@@ -1333,6 +1355,7 @@ function startActivity(){
   showScreen("screen-activity");
   loadCurrentPose();
   if(!state.stream) startCamera();
+  setTimeout(syncDemoPaneHeight, 50);
 }
 
 function collectSettingsFromUIIfNeeded(){
@@ -1355,9 +1378,15 @@ function loadCurrentPose(){
   feedbackBanner.innerHTML = "つぎのポーズをみてね";
   progressPill.textContent = `${state.currentIndex+1} / ${state.sequence.length}`;
 
-  // お手本(イラスト・カメラ重ねガイド)はカウントダウンが終わってから表示する
+  // お手本の中身(イラスト・ポーズ名)はカウントダウンが終わってから表示する。
+  // 「イラストで見せる」設定のときは、白い枠自体はカウントダウン中も残しておく
   demoPoseName.innerHTML = "";
-  document.getElementById("demoPane").style.display = "none";
+  demoCtx.clearRect(0, 0, demoCanvas.width, demoCanvas.height);
+  if(state.settings.demoMode === "illust"){
+    document.getElementById("demoPane").style.display = "flex";
+  }else{
+    document.getElementById("demoPane").style.display = "none";
+  }
 
   runCountdownThenReveal();
 }
