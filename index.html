@@ -202,12 +202,6 @@
     width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
     gap:14px;
   }
-  .corner-btn{
-    position:absolute; z-index:25;
-    width:48px; height:48px; font-size:22px;
-  }
-  .corner-bottom-left{ left:12px; bottom:12px; }
-  .corner-bottom-right{ right:12px; bottom:12px; }
   .progress-pill{
     background:#fff; border-radius:20px; padding:8px 16px; font-size:15px; font-weight:700;
     box-shadow:0 2px 6px rgba(0,0,0,.06); color:var(--main-blue-dark);
@@ -482,14 +476,17 @@
           <div class="countdown-number" id="countdownNumber"></div>
         </div>
         <div class="success-burst" id="successBurst"></div>
-        <button class="icon-btn corner-btn corner-bottom-left" id="btnQuit" title="もどる">←</button>
       </div>
       <div class="demo-pane" id="demoPane">
         <div class="demo-title">おてほん</div>
         <canvas id="demoCanvas" width="200" height="200"></canvas>
         <div id="demoPoseName" style="font-size:15px;font-weight:700;color:var(--main-blue-dark);"></div>
-        <button class="icon-btn corner-btn corner-bottom-right" id="btnHowToOpen" title="つかいかた">❓</button>
       </div>
+    </div>
+
+    <div class="activity-under-stage-bar">
+      <button class="icon-btn" id="btnQuit" title="もどる">←</button>
+      <button class="icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
     </div>
 
     <div class="keep-gauge-wrap">
@@ -619,11 +616,17 @@ const POSE_DEFS = {
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{}),
     check: (lm)=> handsDownCheck(lm)
   },
-  legsWide: {
-    label: "<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    ruby: "<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'wide' }),
-    check: (lm)=> legsWideApart(lm)
+  legsWideLeft: {
+    label: "ひだり<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
+    ruby: "ひだり<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneOutLeft' }),
+    check: (lm)=> oneLegOutToSide(lm,'left')
+  },
+  legsWideRight: {
+    label: "みぎ<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
+    ruby: "みぎ<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneOutRight' }),
+    check: (lm)=> oneLegOutToSide(lm,'right')
   },
   oneLegUp: {
     label: "<ruby>片<rt>かた</rt></ruby><ruby>足<rt>あし</rt></ruby>をあげる",
@@ -655,50 +658,26 @@ const POSE_DEFS = {
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'up', legs:'oneOutRight' }),
     check: (lm)=> handUpLegOutCheck(lm,'left')
   },
-  rightHandToLeftShoulder: {
-    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>耳<rt>みみ</rt></ruby>をタッチ",
-    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>耳<rt>みみ</rt></ruby>をタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossEar' }),
-    check: (lm)=> wristNearOppositeEar(lm,16,7)
-  },
-  leftHandToRightShoulder: {
-    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>耳<rt>みみ</rt></ruby>をタッチ",
-    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>耳<rt>みみ</rt></ruby>をタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossEar' }),
-    check: (lm)=> wristNearOppositeEar(lm,15,8)
-  },
   rightHipCrossLeftSide: {
-    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>よこ",
-    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>よこ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossHip', armLeft:'side' }),
-    check: (lm)=> wristNearOppositeHip(lm,16,23) && !wristAboveShoulder(lm,15) && sideArmCheck(lm,15)
-  },
-  rightHipCrossLeftUp: {
-    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>うえ",
-    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>うえ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossHip', armLeft:'up' }),
-    check: (lm)=> wristNearOppositeHip(lm,16,23) && wristAboveShoulder(lm,15)
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossHip' }),
+    check: (lm)=> wristNearOppositeHip(lm,16,23)
   },
   leftHipCrossRightSide: {
-    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>よこ",
-    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>よこ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossHip', armRight:'side' }),
-    check: (lm)=> wristNearOppositeHip(lm,15,24) && !wristAboveShoulder(lm,16) && sideArmCheck(lm,16)
-  },
-  leftHipCrossRightUp: {
-    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>うえ",
-    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ・みぎ<ruby>手<rt>て</rt></ruby>うえ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossHip', armRight:'up' }),
-    check: (lm)=> wristNearOppositeHip(lm,15,24) && wristAboveShoulder(lm,16)
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>腰<rt>こし</rt></ruby>タッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossHip' }),
+    check: (lm)=> wristNearOppositeHip(lm,15,24)
   }
 };
-const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHandToLeftShoulder","leftHandToRightShoulder","rightHipCrossLeftSide","rightHipCrossLeftUp","leftHipCrossRightSide","leftHipCrossRightUp"];
+const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide"];
 
 /* ---------- レベル分け(設定画面のショートカット用) ---------- */
 const POSE_LEVELS = {
   easy: ["banzai","armsSide","forward","handsDown"],
-  normal: ["rightHandUp","leftHandUp","squat","legsWide","rightHandToLeftShoulder","leftHandToRightShoulder"],
-  hard: ["touchHead","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","rightHipCrossLeftUp","leftHipCrossRightSide","leftHipCrossRightUp"]
+  normal: ["rightHandUp","leftHandUp","squat","legsWideLeft","legsWideRight"],
+  hard: ["touchHead","oneLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide"]
 };
 
 /* ---------- 判定ヘルパー(正規化座標, y小さいほど上) ---------- */
@@ -708,15 +687,17 @@ function wristAboveShoulder(lm, wristIdx){
   return lm[wristIdx].y < lm[shoulderIdx].y - 0.05;
 }
 function bothArmsFullyUp(lm){
-  // バンザイ:両手をしっかり上まで上げているか。
-  // 肩より少し上、という緩い基準ではなく、頭(鼻)より上まで上げていることを求める。
-  // さらに、左右の手の高さがそろっている(平行になっている)ことも確認する。
+  // バンザイ:腕を耳につけるくらい、まっすぐ高く上げているか。
+  // 頭のてっぺんよりもさらに上まで上げていることを求め、かつ左右の高さがそろっている
+  // (平行に上がっている)ことも確認する。
   if(!lm[15]||!lm[16]||!lm[0]||!lm[11]||!lm[12]) return false;
+  const shoulderY = (lm[11].y + lm[12].y)/2;
   const noseY = lm[0].y;
-  const bothAboveHead = lm[15].y < noseY && lm[16].y < noseY;
+  const headTopY = noseY - (shoulderY - noseY) * 0.6; // 頭のてっぺんのおおよその高さ
+  const bothAboveHeadTop = lm[15].y < headTopY && lm[16].y < headTopY;
   // 左右の高さがそろっているか(片方だけ高い状態を除く)
-  const levelOk = Math.abs(lm[15].y - lm[16].y) < 0.12;
-  return bothAboveHead && levelOk;
+  const levelOk = Math.abs(lm[15].y - lm[16].y) < 0.10;
+  return bothAboveHeadTop && levelOk;
 }
 function wristsLevelWithShoulders(lm){
   if(!lm[15]||!lm[16]||!lm[11]||!lm[12]) return false;
@@ -782,10 +763,21 @@ function handsDownCheck(lm){
   const withinBodyRight = Math.abs(lm[16].x - lm[24].x) < shoulderWidth * 0.7;
   return nearHipLeft && nearHipRight && withinBodyLeft && withinBodyRight;
 }
-function legsWideApart(lm){
+function oneLegOutToSide(lm, side){
+  // 片足だけを横に大きく開いているか(もう片方の足はほぼ元の位置)を判定する。
+  // side: 'left'なら左足(27)が外側(体の外へ)大きく開いているか、'right'なら右足(28)
   if(!lm[27]||!lm[28]||!lm[23]||!lm[24]) return false;
+  const hipCenterX = (lm[23].x + lm[24].x)/2;
   const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.1;
-  return Math.abs(lm[27].x - lm[28].x) > hipWidth * 1.8;
+  if(side === 'left'){
+    const leftLegOut = (hipCenterX - lm[27].x) > hipWidth * 0.9; // 左足首が中心から左へ大きく離れている
+    const rightLegNear = Math.abs(lm[28].x - hipCenterX) < hipWidth * 0.9; // 右足首はあまり動いていない
+    return leftLegOut && rightLegNear;
+  }else{
+    const rightLegOut = (lm[28].x - hipCenterX) > hipWidth * 0.9;
+    const leftLegNear = Math.abs(lm[27].x - hipCenterX) < hipWidth * 0.9;
+    return rightLegOut && leftLegNear;
+  }
 }
 function oneLegRaised(lm){
   // 片足を上げているかを判定する。以下のどちらかを満たせばOK(緩めの判定):
@@ -838,61 +830,23 @@ function handUpLegOutCheck(lm, side){
     return handOk && legOk;
   }
 }
-function wristNearOppositeShoulder(lm, wristIdx, targetShoulderIdx){
-  // 正中線を越えて反対側の肩にタッチしているかを、手首と肩の距離で判定する
-  if(!lm[wristIdx] || !lm[targetShoulderIdx]) return false;
-  const dx = lm[wristIdx].x - lm[targetShoulderIdx].x;
-  const dy = lm[wristIdx].y - lm[targetShoulderIdx].y;
-  return Math.sqrt(dx*dx+dy*dy) < 0.13;
-}
-function wristNearOppositeEar(lm, wristIdx, targetEarIdx){
-  // 正中線を越えて反対側の耳にタッチしているかを判定する。
-  // 耳との距離が近いことに加えて、体の中心線をしっかり越えていることも必須にする
-  if(!lm[wristIdx] || !lm[targetEarIdx] || !lm[11] || !lm[12]) return false;
-  const dx = lm[wristIdx].x - lm[targetEarIdx].x;
-  const dy = lm[wristIdx].y - lm[targetEarIdx].y;
-  const nearEar = Math.sqrt(dx*dx+dy*dy) < 0.13;
-
-  const bodyCenterX = (lm[11].x + lm[12].x)/2;
-  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
-  const crossedMidline = wristIdx === 16
-    ? (lm[wristIdx].x < bodyCenterX - shoulderWidth*0.1)
-    : (lm[wristIdx].x > bodyCenterX + shoulderWidth*0.1);
-
-  return nearEar && crossedMidline;
-}
 function wristNearOppositeHip(lm, wristIdx, targetHipIdx){
   // 正中線を越えて反対側の腰にタッチしているかを判定する。
-  // 手首が「反対側の腰のx座標まで到達しているか(またはそれを越えているか)」を主条件にし、
-  // 高さは腰の高さ付近にあることを確認する。
+  // 手首が「反対側の腰のすぐそば」まで届いていることを、横方向・高さ両方で確認する。
   if(!lm[wristIdx] || !lm[targetHipIdx] || !lm[23] || !lm[24]) return false;
 
   const hipY = (lm[23].y + lm[24].y)/2;
   const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.08;
 
-  // 高さ:腰の高さ付近(上下に広めの許容)
-  const heightOk = Math.abs(lm[wristIdx].y - hipY) < 0.18;
+  // 高さ:腰の高さ付近
+  const heightOk = Math.abs(lm[wristIdx].y - hipY) < 0.15;
 
-  // 横方向:反対側の腰まで到達しているか。
-  // 右手首(16)なら左腰(23)のx座標まで、左手首(15)なら右腰(24)のx座標まで届いていればOK。
-  // 完全に到達しなくても、腰幅の3割手前まで来ていれば成立とする(手のひらで触れる位置を想定)
-  const reachOk = wristIdx === 16
-    ? (lm[wristIdx].x < lm[targetHipIdx].x + hipWidth*0.3)
-    : (lm[wristIdx].x > lm[targetHipIdx].x - hipWidth*0.3);
+  // 横方向:反対側の腰のすぐ近くまで届いているか(腰幅の半分の範囲内)
+  const horizontalDist = Math.abs(lm[wristIdx].x - lm[targetHipIdx].x);
+  const reachOk = horizontalDist < hipWidth * 0.7;
 
   return heightOk && reachOk;
 }
-function sideArmCheck(lm, wristIdx){
-  // 片方の手だけが横に広がっているかの判定(肩の高さ付近・体から十分離れている)
-  const shoulderIdx = wristIdx===15 ? 11 : 12;
-  if(!lm[wristIdx] || !lm[11] || !lm[12] || !lm[shoulderIdx]) return false;
-  const avgShoulderY = (lm[11].y + lm[12].y)/2;
-  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
-  const levelOk = Math.abs(lm[wristIdx].y - avgShoulderY) < 0.12;
-  const farOk = Math.abs(lm[wristIdx].x - lm[shoulderIdx].x) > shoulderWidth * 0.6;
-  return levelOk && farOk;
-}
-
 /* ---------- 棒人間イラスト描画 ---------- */
 function drawStick(ctx,w,h,opt){
   ctx.clearRect(0,0,w,h);
@@ -972,8 +926,9 @@ function drawStick(ctx,w,h,opt){
     ctx.beginPath();
     ctx.moveTo(startX, neckY);
     if(mode === 'up'){
-      ctx.lineTo(startX + sideSign*w*0.08, neckY - h*0.18);
-      ctx.lineTo(startX + sideSign*w*0.10, neckY - h*0.32);
+      // バンザイ:腕を耳につけるように、まっすぐ高く上げる
+      ctx.lineTo(startX + sideSign*w*0.03, neckY - h*0.18);
+      ctx.lineTo(startX + sideSign*w*0.02, neckY - h*0.33);
     }else if(mode === 'side'){
       ctx.lineTo(startX + sideSign*w*0.14, neckY);
       ctx.lineTo(startX + sideSign*w*0.26, neckY);
@@ -1043,7 +998,7 @@ function drawStick(ctx,w,h,opt){
 ========================================================= */
 const state = {
   settings: {
-    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp"],
+    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWideLeft","legsWideRight","oneLegUp","armsCross","comboSideUp"],
     keepSec: 3,
     rounds: 8,
     timeLimitOn: true,
@@ -1456,10 +1411,8 @@ function loadCurrentPose(){
   demoCtx.clearRect(0, 0, demoCanvas.width, demoCanvas.height);
   if(state.settings.demoMode === "illust"){
     document.getElementById("demoPane").style.display = "flex";
-    moveHowToButtonTo("demoPane");
   }else{
     document.getElementById("demoPane").style.display = "none";
-    moveHowToButtonTo("cameraPane");
   }
 
   runCountdownThenReveal();
@@ -1515,7 +1468,6 @@ function clearCountdown(){
 
 function demoPane_showIllustOnly(){
   document.getElementById("demoPane").style.display = "flex";
-  moveHowToButtonTo("demoPane");
   const key = state.sequence[state.currentIndex];
   POSE_DEFS[key].illust(demoCtx, demoCanvas.width, demoCanvas.height);
 }
@@ -1524,16 +1476,6 @@ function demoPane_showOverlayGuide(){
   // お手本は overlay キャンバス側(drawDemoOverlayIfNeeded)で
   // 半透明の棒人間として映像中央に描画する
   document.getElementById("demoPane").style.display = "none";
-  // 白い枠が消えるので、つかいかたボタンは映像側の右下に移す
-  moveHowToButtonTo("cameraPane");
-}
-function moveHowToButtonTo(target){
-  const btn = document.getElementById("btnHowToOpen");
-  if(!btn) return;
-  const dest = target === "demoPane"
-    ? document.getElementById("demoPane")
-    : document.querySelector(".camera-pane");
-  if(dest && btn.parentElement !== dest) dest.appendChild(btn);
 }
 
 function setGauge(ratio){
