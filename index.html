@@ -635,16 +635,16 @@ const POSE_DEFS = {
     check: (lm)=> handsDownCheck(lm)
   },
   legsWideLeft: {
-    label: "ひだり<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    ruby: "ひだり<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneOutLeft' }),
-    check: (lm)=> oneLegOutToSide(lm,'left')
+    label: "ひだり<ruby>足<rt>あし</rt></ruby>をななめにあげる",
+    ruby: "ひだり<ruby>足<rt>あし</rt></ruby>をななめにあげる",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'diagonalUpLeft' }),
+    check: (lm)=> oneLegDiagonalUp(lm,'left')
   },
   legsWideRight: {
-    label: "みぎ<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    ruby: "みぎ<ruby>足<rt>あし</rt></ruby>を<ruby>横<rt>よこ</rt></ruby>にひらく",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'oneOutRight' }),
-    check: (lm)=> oneLegOutToSide(lm,'right')
+    label: "みぎ<ruby>足<rt>あし</rt></ruby>をななめにあげる",
+    ruby: "みぎ<ruby>足<rt>あし</rt></ruby>をななめにあげる",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ legs:'diagonalUpRight' }),
+    check: (lm)=> oneLegDiagonalUp(lm,'right')
   },
   rightLegUp: {
     label: "みぎ<ruby>足<rt>あし</rt></ruby>をあげる",
@@ -794,20 +794,29 @@ function handsDownCheck(lm){
   const withinBodyRight = Math.abs(lm[16].x - lm[24].x) < shoulderWidth * 0.7;
   return nearHipLeft && nearHipRight && withinBodyLeft && withinBodyRight;
 }
-function oneLegOutToSide(lm, side){
-  // 片足だけを横に大きく開いているか(もう片方の足はほぼ元の位置)を判定する。
-  // side: 'left'なら左足(27)が外側(体の外へ)大きく開いているか、'right'なら右足(28)
+function oneLegDiagonalUp(lm, side){
+  // 片足を斜め外側に上げているかを判定する(添付画像のような、軸足はまっすぐ・
+  // もう片方は外側やや上に浮かせる動き)。
+  // 横方向に外側へ開いていること、かつ足首が接地しているときより上がっていることを見る。
   if(!lm[27]||!lm[28]||!lm[23]||!lm[24]) return false;
   const hipCenterX = (lm[23].x + lm[24].x)/2;
   const hipWidth = Math.abs(lm[23].x - lm[24].x) || 0.1;
+  const hipY = (lm[23].y + lm[24].y)/2;
+
+  function raisedLegCheck(ankle, otherAnkle, outwardSign){
+    // 外側方向にある程度離れているか(真横に大きく開くほどではなく、斜めの動きを想定して緩め)
+    const outward = (ankle.x - hipCenterX) * outwardSign > hipWidth * 0.5;
+    // 足首が浮いているか(腰との高さの差が、地面についている時より小さい=上がっている)
+    const raised = (ankle.y - hipY) < hipWidth * 3.2;
+    // もう片方の足首はあまり動いていない(軸足として残っている)
+    const otherStill = Math.abs(otherAnkle.x - hipCenterX) < hipWidth * 0.9;
+    return outward && raised && otherStill;
+  }
+
   if(side === 'left'){
-    const leftLegOut = (hipCenterX - lm[27].x) > hipWidth * 0.9; // 左足首が中心から左へ大きく離れている
-    const rightLegNear = Math.abs(lm[28].x - hipCenterX) < hipWidth * 0.9; // 右足首はあまり動いていない
-    return leftLegOut && rightLegNear;
+    return raisedLegCheck(lm[27], lm[28], -1);
   }else{
-    const rightLegOut = (lm[28].x - hipCenterX) > hipWidth * 0.9;
-    const leftLegNear = Math.abs(lm[27].x - hipCenterX) < hipWidth * 0.9;
-    return rightLegOut && leftLegNear;
+    return raisedLegCheck(lm[28], lm[27], 1);
   }
 }
 function oneLegRaised(lm, side){
@@ -965,13 +974,21 @@ function drawStick(ctx,w,h,opt){
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.10, hipY + h*0.14); ctx.lineTo(cx + w*0.05, hipY + h*0.20);
   }else if(opt.legs === 'oneOutLeft'){
-    // 左足(向かって左)を横に大きく開く、右足はまっすぐ
+    // 左足(向かって左)を横に大きく開く、右足はまっすぐ(手足同時ポーズ用)
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.32, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
   }else if(opt.legs === 'oneOutRight'){
-    // 右足(向かって右)を横に大きく開く、左足はまっすぐ
+    // 右足(向かって右)を横に大きく開く、左足はまっすぐ(手足同時ポーズ用)
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
     ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.32, footY);
+  }else if(opt.legs === 'diagonalUpLeft'){
+    // 左足をななめ外側に上げる(添付画像のイメージ:軸足はまっすぐ、もう片方は外側やや上に浮かせる)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.24, hipY + h*0.14); ctx.lineTo(cx - w*0.34, hipY + h*0.10);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + legStanceWidth, footY);
+  }else if(opt.legs === 'diagonalUpRight'){
+    // 右足をななめ外側に上げる(添付画像のイメージ:軸足はまっすぐ、もう片方は外側やや上に浮かせる)
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.24, hipY + h*0.14); ctx.lineTo(cx + w*0.34, hipY + h*0.10);
   }else{
     // まっすぐ立っている状態(気をつけ・何もしていないときなど):腰より少し外側へ広げて、脚がくっつかないように
     ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - legStanceWidth, footY);
