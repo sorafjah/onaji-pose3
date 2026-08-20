@@ -597,10 +597,10 @@ const POSE_DEFS = {
     check: (lm)=> isSquatting(lm)
   },
   forward: {
-    label: "まえならえ",
-    ruby: "まえならえ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ arms:'forward' }),
-    check: (lm)=> wristsForward(lm)
+    label: "かたに<ruby>手<rt>て</rt></ruby>をおく",
+    ruby: "かたに<ruby>手<rt>て</rt></ruby>をおく",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ arms:'shoulderTouch' }),
+    check: (lm)=> handsOnOwnShoulders(lm)
   },
   handsDown: {
     label: "きをつけ",
@@ -725,15 +725,17 @@ function isSquatting(lm){
   const hipToKnee = kneeY - hipY;
   return (hipToKnee / legLen) > 0.62;
 }
-function wristsForward(lm){
-  // 前ならえ:手首が肩の高さ付近にあり、かつ左右の手首が体の正面で狭く(横に広げていない)そろっている
-  // (「手を横に広げる」との違いは、手首同士の横幅の狭さで区別する)
+function handsOnOwnShoulders(lm){
+  // 肩に手を置く:左手首が自分の左肩、右手首が自分の右肩の近くにあるか(交差しない、同じ側どうし)
   if(!lm[15]||!lm[16]||!lm[11]||!lm[12]) return false;
-  const avgShoulderY = (lm[11].y + lm[12].y)/2;
-  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
-  const levelOk = Math.abs(lm[15].y - avgShoulderY) < 0.14 && Math.abs(lm[16].y - avgShoulderY) < 0.14;
-  const narrowOk = Math.abs(lm[15].x - lm[16].x) < shoulderWidth * 1.3;
-  return levelOk && narrowOk;
+  const leftOk = distanceOf(lm[15], lm[11]) < 0.13;
+  const rightOk = distanceOf(lm[16], lm[12]) < 0.13;
+  return leftOk && rightOk;
+}
+function distanceOf(a, b){
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
 }
 function handsDownCheck(lm){
   // 気をつけ:両手首が腰の高さ付近、体の横幅の中に収まっている
@@ -849,71 +851,87 @@ function drawStick(ctx,w,h,opt){
   ctx.lineTo(cx, bodyBottom);
   ctx.stroke();
 
-  // 脚
+  // 肩・腰のめじるし(横線)。腕・脚はこの横線の両端から生える
+  const markerWidth = w*0.16;
+  const prevLineWidth = ctx.lineWidth;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx - markerWidth, neckY);
+  ctx.lineTo(cx + markerWidth, neckY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - markerWidth, hipY);
+  ctx.lineTo(cx + markerWidth, hipY);
+  ctx.stroke();
+  ctx.lineWidth = prevLineWidth;
+
+  // 脚(肩と同様、腰の横線の両端から生える)
   ctx.beginPath();
   if(opt.pose === 'squat'){
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.16, hipY + h*0.10); ctx.lineTo(cx - w*0.14, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.16, hipY + h*0.10); ctx.lineTo(cx + w*0.14, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.16, hipY + h*0.10); ctx.lineTo(cx - w*0.14, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.16, hipY + h*0.10); ctx.lineTo(cx + w*0.14, footY);
   }else if(opt.legs === 'wide'){
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.22, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.22, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.22, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.22, footY);
   }else if(opt.legs === 'oneUpRight'){
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.14, hipY + h*0.08); ctx.lineTo(cx + w*0.06, hipY + h*0.10);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.14, hipY + h*0.08); ctx.lineTo(cx + w*0.06, hipY + h*0.10);
   }else if(opt.legs === 'oneOutLeft'){
     // 左足(向かって左)を横に大きく開く、右足はまっすぐ
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.30, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.11, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.30, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.11, footY);
   }else if(opt.legs === 'oneOutRight'){
     // 右足(向かって右)を横に大きく開く、左足はまっすぐ
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.30, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.30, footY);
   }else{
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx - w*0.11, footY);
-    ctx.moveTo(cx, hipY); ctx.lineTo(cx + w*0.11, footY);
+    ctx.moveTo(cx - markerWidth, hipY); ctx.lineTo(cx - w*0.11, footY);
+    ctx.moveTo(cx + markerWidth, hipY); ctx.lineTo(cx + w*0.11, footY);
   }
   ctx.stroke();
 
   // 腕(左右は「見る側」基準=画面のまま:左に描く腕がイラスト上の左手)
+  // 肩の横線の端(cx + sideSign*markerWidth, neckY)を起点にする
   function arm(sideSign, mode){
+    const startX = cx + sideSign*markerWidth;
     ctx.beginPath();
-    ctx.moveTo(cx, neckY + h*0.03);
+    ctx.moveTo(startX, neckY);
     if(mode === 'up'){
-      ctx.lineTo(cx + sideSign*w*0.20, neckY - h*0.16);
-      ctx.lineTo(cx + sideSign*w*0.24, neckY - h*0.30);
+      ctx.lineTo(startX + sideSign*w*0.08, neckY - h*0.18);
+      ctx.lineTo(startX + sideSign*w*0.10, neckY - h*0.32);
     }else if(mode === 'side'){
-      ctx.lineTo(cx + sideSign*w*0.26, neckY + h*0.04);
-      ctx.lineTo(cx + sideSign*w*0.38, neckY + h*0.04);
-    }else if(mode === 'forward'){
-      // 前ならえ:体の正面に短く伸ばす(奥行きは表現できないので前方の目安として胴の少し外側・肩の高さに描く)
-      ctx.lineTo(cx + sideSign*w*0.14, neckY + h*0.10);
-      ctx.lineTo(cx + sideSign*w*0.30, neckY + h*0.10);
+      ctx.lineTo(startX + sideSign*w*0.14, neckY);
+      ctx.lineTo(startX + sideSign*w*0.26, neckY);
+    }else if(mode === 'shoulderTouch'){
+      // 自分の肩に手を置く:同じ側の肩の位置まで、ひじを軽く曲げて触れる短い動き
+      ctx.lineTo(startX + sideSign*w*0.03, neckY - h*0.09);
+      ctx.lineTo(startX - sideSign*w*0.01, neckY - h*0.01);
     }else if(mode === 'headTouch'){
-      ctx.lineTo(cx + sideSign*w*0.16, neckY - h*0.02);
+      ctx.lineTo(startX - sideSign*w*0.02, neckY - h*0.10);
       ctx.lineTo(cx + sideSign*w*0.06, headY);
     }else if(mode === 'crossToOpposite'){
       // 腕組み:反対側まで伸ばす
-      ctx.lineTo(cx + sideSign*w*0.06, neckY + h*0.10);
+      ctx.lineTo(startX - sideSign*w*0.06, neckY + h*0.08);
       ctx.lineTo(cx - sideSign*w*0.16, neckY + h*0.16);
     }else if(mode === 'crossShoulder'){
       // 反対側の肩にタッチ:正中線を越えて反対の肩の位置まで
-      ctx.lineTo(cx + sideSign*w*0.04, neckY - h*0.02);
-      ctx.lineTo(cx - sideSign*w*0.14, neckY - h*0.02);
+      ctx.lineTo(startX - sideSign*w*0.10, neckY - h*0.02);
+      ctx.lineTo(cx - sideSign*markerWidth, neckY);
     }else if(mode === 'crossHip'){
       // 反対側の腰にタッチ:正中線を越えて反対側・腰の高さまで
-      ctx.lineTo(cx + sideSign*w*0.05, hipY - h*0.06);
-      ctx.lineTo(cx - sideSign*w*0.12, hipY - h*0.02);
+      ctx.lineTo(startX - sideSign*w*0.06, hipY - h*0.06);
+      ctx.lineTo(cx - sideSign*w*0.10, hipY - h*0.02);
     }else{
       // down
-      ctx.lineTo(cx + sideSign*w*0.14, neckY + h*0.14);
-      ctx.lineTo(cx + sideSign*w*0.10, neckY + h*0.24);
+      ctx.lineTo(startX + sideSign*w*0.05, neckY + h*0.14);
+      ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.24);
     }
     ctx.stroke();
   }
 
   if(opt.arms === 'up'){ arm(-1,'up'); arm(1,'up'); }
   else if(opt.arms === 'side'){ arm(-1,'side'); arm(1,'side'); }
-  else if(opt.arms === 'forward'){ arm(-1,'forward'); arm(1,'forward'); }
+  else if(opt.arms === 'shoulderTouch'){ arm(-1,'shoulderTouch'); arm(1,'shoulderTouch'); }
   else if(opt.arms === 'cross'){ arm(-1,'crossToOpposite'); arm(1,'crossToOpposite'); }
   else if(opt.armRight === 'crossHip' || opt.armLeft === 'crossHip'){
     // 正中線を越えて腰タッチ+反対の手はよこ/うえ、という左右非対称の複合ポーズ
@@ -1255,6 +1273,7 @@ function drawDemoOverlayIfNeeded(){
     set strokeStyle(v){ overlayCtx.strokeStyle = v; },
     set fillStyle(v){ overlayCtx.fillStyle = v; },
     set lineWidth(v){ overlayCtx.lineWidth = v; },
+    get lineWidth(){ return overlayCtx.lineWidth; },
     set lineCap(v){ overlayCtx.lineCap = v; }
   };
   overlayCtx.strokeStyle = "#ffffff";
