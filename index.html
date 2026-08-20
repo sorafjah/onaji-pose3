@@ -193,15 +193,23 @@
   .setting-group.disabled{ opacity:.4; pointer-events:none; }
 
   /* ---------- 活動画面 ---------- */
-  #screen-activity{ padding:10px; gap:8px; }
+  #screen-activity{ padding:8px; gap:6px; }
   .activity-topbar{
     width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
     gap:10px;
   }
   .activity-under-stage-bar{
-    width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
-    gap:14px;
+    width:100%; max-width:900px; display:flex; align-items:center; justify-content:flex-start;
+    gap:10px;
   }
+  .small-icon-btn{
+    width:36px; height:36px; border-radius:50%;
+    background:#fff; border:1.5px solid var(--border);
+    font-size:16px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 0 var(--border);
+    color:var(--sub); opacity:.85;
+  }
+  .small-icon-btn:active{ transform:translateY(1px); box-shadow:none; }
   .progress-pill{
     background:#fff; border-radius:20px; padding:8px 16px; font-size:15px; font-weight:700;
     box-shadow:0 2px 6px rgba(0,0,0,.06); color:var(--main-blue-dark);
@@ -311,19 +319,26 @@
   }
 
   /* ---------- 結果画面 ---------- */
-  #screen-result{ text-align:center; }
+  #screen-result{ text-align:center; overflow-y:auto; padding:16px 0; }
   .result-card{
     background:var(--card-bg); border-radius:24px; padding:30px 34px;
     box-shadow:0 4px 16px rgba(0,0,0,.08); max-width:480px; width:100%;
+    max-height:calc(100vh - 32px); display:flex; flex-direction:column;
+    box-sizing:border-box;
   }
-  .result-big{ font-size:56px; margin:8px 0; }
-  .result-count{ font-size:22px; font-weight:700; color:var(--main-blue-dark); margin:6px 0 20px; }
-  .result-list{ text-align:left; margin:0 0 20px; padding:0; list-style:none; }
+  .result-big{ font-size:56px; margin:8px 0; flex-shrink:0; }
+  .result-count{ font-size:22px; font-weight:700; color:var(--main-blue-dark); margin:6px 0 20px; flex-shrink:0; }
+  .result-list{
+    text-align:left; margin:0 0 20px; padding:0; list-style:none;
+    overflow-y:auto; flex:1 1 auto; min-height:0;
+  }
   .result-list li{
     display:flex; align-items:center; gap:10px; padding:8px 4px; font-size:16px;
     border-bottom:1px solid var(--border);
   }
   .result-list .mark{ font-size:20px; width:26px; text-align:center; }
+  .result-card h2{ flex-shrink:0; margin:0 0 8px; }
+  .result-card .top-buttons{ flex-shrink:0; }
 
   @media (max-width:600px){
     .stage-wrap{ flex-direction:column; align-items:stretch; }
@@ -493,17 +508,17 @@
       </div>
     </div>
 
-    <div class="activity-under-stage-bar">
-      <button class="icon-btn" id="btnQuit" title="もどる">←</button>
-      <button class="icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
-    </div>
-
     <div class="keep-gauge-wrap">
       <div class="keep-gauge-bar"><div class="keep-gauge-fill" id="gaugeFill"></div></div>
       <div class="keep-gauge-label" id="gaugeLabel"></div>
     </div>
 
     <div class="feedback-banner wait" id="feedbackBanner">おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね</div>
+
+    <div class="activity-under-stage-bar">
+      <button class="small-icon-btn" id="btnQuit" title="もどる">←</button>
+      <button class="small-icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
+    </div>
 
     <div class="activity-bottombar">
       <button class="btn" id="btnNext" style="display:none;">つぎへ</button>
@@ -745,8 +760,9 @@ function isSquatting(lm){
   const torsoLen = Math.max(0.05, hipY - shoulderY); // 上半身の長さ(基準の目安)
   const hipToAnkle = ankleY - hipY; // 腰〜足首の縦距離(まっすぐ立っているときが最大)
   // まっすぐ立っているとき、hipToAnkleは概ねtorsoLenの1.6〜2倍程度になることが多いので、
-  // それより明確に縮んでいれば、腰を落としている(しゃがんでいる)とみなす
-  return hipToAnkle < torsoLen * 1.25;
+  // それより明確に縮んでいれば、腰を落としている(しゃがんでいる)とみなす。
+  // しっかり深くしゃがまないとオッケーにならないよう、係数を厳しめにしている
+  return hipToAnkle < torsoLen * 1.0;
 }
 function handsOnOwnEars(lm){
   // 両手で耳をタッチ:左手首が自分の左耳(7)、右手首が自分の右耳(8)の近くにあるか
@@ -883,6 +899,11 @@ function drawStick(ctx,w,h,opt){
     hipY = h*0.72;
     footY = h*0.88;
     bodyBottom = hipY;
+  }else if(opt.armRight === 'crossKnee' || opt.armLeft === 'crossKnee'){
+    // ひざタッチ:胴体を少し短くして、手がひざにしっかり届く見た目にする
+    hipY = h*0.52;
+    footY = h*0.86;
+    bodyBottom = hipY;
   }
 
   // 頭(白丸・輪郭は本体と同じ青)
@@ -996,8 +1017,8 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(cx - sideSign*markerWidth, hipY);
     }else if(mode === 'crossKnee'){
       // 反対側のひざ(まっすぐ立った状態のひざの高さ)にタッチしにいく
-      ctx.lineTo(startX - sideSign*w*0.06, hipY + h*0.08);
-      ctx.lineTo(cx - sideSign*w*0.03, hipY + h*0.13);
+      ctx.lineTo(startX - sideSign*w*0.08, hipY + h*0.10);
+      ctx.lineTo(cx - sideSign*legStanceWidth*0.55, hipY + h*0.18);
     }else{
       // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
       ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
@@ -1783,6 +1804,18 @@ document.getElementById("btnHowToOpen").addEventListener("click", openHowTo);
   try{ hide = localStorage.getItem(HOWTO_STORAGE_KEY) === "1"; }
   catch(e){ hide = false; }
   if(!hide) openHowTo();
+})();
+
+/* ---------- ダブルタップでの拡大(ズーム)を防止する ---------- */
+(function preventDoubleTapZoom(){
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (e)=>{
+    const now = Date.now();
+    if(now - lastTouchEnd <= 350){
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive:false });
 })();
 
 /* 初期化 */
