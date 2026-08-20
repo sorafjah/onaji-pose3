@@ -814,16 +814,21 @@ function handsDownCheck(lm){
 }
 function oneLegDiagonalUp(lm, side){
   // 片足を斜め外側に上げているかを判定する。
-  // 「上げた足の足首が、軸足のひざより高い位置に来ているか」だけを見るシンプルな基準にする
-  // (外側に開いているかどうかは問わない。高さだけで確実に反応させることを優先する)。
-  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]) return false;
+  // 「上げた足の足首が、腰からひざまでの距離の1.2倍くらいの高さまで来ているか」を基準にする
+  // (軸足のひざより少し低い位置でもオッケーになる、やさしめの基準)。
+  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
+  const hipY = (lm[23].y + lm[24].y)/2;
 
   if(side === 'left'){
-    // 左足(27)を上げる。軸足は右足なので右ひざ(26)が基準
-    return lm[27].y < lm[26].y;
+    // 左足(27)を上げる。軸足は右足なので、腰〜右ひざ(26)の距離を基準にする
+    const axisHipToKnee = Math.max(0.03, lm[26].y - hipY);
+    const targetY = hipY + axisHipToKnee * 1.2;
+    return lm[27].y < targetY;
   }else{
-    // 右足(28)を上げる。軸足は左足なので左ひざ(25)が基準
-    return lm[28].y < lm[25].y;
+    // 右足(28)を上げる。軸足は左足なので、腰〜左ひざ(25)の距離を基準にする
+    const axisHipToKnee = Math.max(0.03, lm[25].y - hipY);
+    const targetY = hipY + axisHipToKnee * 1.2;
+    return lm[28].y < targetY;
   }
 }
 function oneLegRaised(lm, side){
@@ -1074,23 +1079,23 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX - sideSign*w*0.08, hipY + h*0.10);
       ctx.lineTo(cx - sideSign*legStanceWidth*0.55, hipY + h*0.18);
     }else if(mode === 'macho'){
-      // マッチョポーズ:ひじを横に張り出し、そこから手首をまっすぐ上げる(力こぶの形)
-      const elbowX = startX + sideSign*w*0.22;
+      // マッチョポーズ:肩〜ひじ・ひじ〜手首がほぼ同じ長さになるように(力こぶの形)
+      const elbowX = startX + sideSign*w*0.14;
       const elbowY = neckY + h*0.02;
       ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(elbowX - sideSign*w*0.02, elbowY - h*0.14);
+      ctx.lineTo(elbowX - sideSign*w*0.02, elbowY - h*0.20);
     }else if(mode === 'haniwaUp'){
-      // ハニワポーズ(上):ひじを横に伸ばし、そこから手首を上に曲げる
-      const elbowX = startX + sideSign*w*0.24;
+      // ハニワポーズ(上):肩〜ひじ・ひじ〜手首がほぼ同じ長さになるように
+      const elbowX = startX + sideSign*w*0.16;
       const elbowY = neckY + h*0.02;
       ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(elbowX, elbowY - h*0.16);
+      ctx.lineTo(elbowX, elbowY - h*0.22);
     }else if(mode === 'haniwaDown'){
-      // ハニワポーズ(下):ひじを横に伸ばし、そこから手首を下に曲げる
-      const elbowX = startX + sideSign*w*0.24;
+      // ハニワポーズ(下):肩〜ひじ・ひじ〜手首がほぼ同じ長さになるように
+      const elbowX = startX + sideSign*w*0.16;
       const elbowY = neckY + h*0.02;
       ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(elbowX, elbowY + h*0.16);
+      ctx.lineTo(elbowX, elbowY + h*0.22);
     }else{
       // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
       ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
