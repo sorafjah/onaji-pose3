@@ -246,6 +246,7 @@
 
   .keep-gauge-wrap{
     width:100%; max-width:900px; display:flex; flex-direction:column; align-items:center; gap:6px;
+    margin-top:24px;
   }
   .keep-gauge-bar{
     width:100%; max-width:520px; height:26px; background:#e8e3d5; border-radius:13px; overflow:hidden;
@@ -749,19 +750,19 @@ function wristsAboveShouldersAndWide(lm){
 }
 function isSquatting(lm){
   // スクワットのように腰を落としているかを判定する。
-  // 上半身を前に傾けなくても成立するよう、「腰から足首までの縦の距離」が
-  // 「腰から肩までの距離(上半身の長さ)」と比べてどれだけ縮んでいるかで見る。
-  // (膝が曲がって腰が下がるほど、腰〜足首の縦距離が短くなる)
-  if(!lm[11]||!lm[12]||!lm[23]||!lm[24]||!lm[27]||!lm[28]) return false;
-  const shoulderY = (lm[11].y + lm[12].y)/2;
+  // 「足首から腰までの高さ」が「足首からひざまでの高さ」の何倍か、という比率で見る。
+  // まっすぐ立っているときは腰の方がずっと高い(比率が大きい)が、
+  // しゃがんで腰が下がるほど、腰の高さがひざの高さに近づいていく(比率が1に近づく)。
+  if(!lm[23]||!lm[24]||!lm[25]||!lm[26]||!lm[27]||!lm[28]) return false;
   const hipY = (lm[23].y + lm[24].y)/2;
+  const kneeY = (lm[25].y + lm[26].y)/2;
   const ankleY = (lm[27].y + lm[28].y)/2;
-  const torsoLen = Math.max(0.05, hipY - shoulderY); // 上半身の長さ(基準の目安)
-  const hipToAnkle = ankleY - hipY; // 腰〜足首の縦距離(まっすぐ立っているときが最大)
-  // まっすぐ立っているとき、hipToAnkleは概ねtorsoLenの1.6〜2倍程度になることが多いので、
-  // それより明確に縮んでいれば、腰を落としている(しゃがんでいる)とみなす。
-  // 「ひざのちょっと上」くらいまで腰を落とせばオッケーになる、ほどよい緩さにしている
-  return hipToAnkle < torsoLen * 1.4;
+
+  const ankleToKnee = Math.max(0.03, ankleY - kneeY); // 足首〜ひざの高さ(基準)
+  const ankleToHip = ankleY - hipY; // 足首〜腰の高さ
+
+  // 「足首〜腰」が「足首〜ひざ」の1.5倍未満まで腰が下がっていればオッケー
+  return ankleToHip < ankleToKnee * 1.5;
 }
 function handsOnOwnEars(lm){
   // 両手で耳をタッチ:左手首が自分の左耳(7)、右手首が自分の右耳(8)の近くにあるか
