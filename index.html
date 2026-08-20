@@ -193,17 +193,17 @@
   .setting-group.disabled{ opacity:.4; pointer-events:none; }
 
   /* ---------- 活動画面 ---------- */
-  #screen-activity{ padding:8px; gap:6px; }
+  #screen-activity{ padding:8px; gap:3px; }
   .activity-topbar{
     width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
     gap:10px;
   }
-  .activity-under-stage-bar{
-    width:100%; max-width:900px; display:flex; align-items:center; justify-content:flex-start;
-    gap:10px;
+  .feedback-row{
+    width:100%; max-width:900px; display:flex; align-items:center;
+    gap:8px;
   }
   .small-icon-btn{
-    width:36px; height:36px; border-radius:50%;
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
     background:#fff; border:1.5px solid var(--border);
     font-size:16px; display:flex; align-items:center; justify-content:center;
     box-shadow:0 1px 0 var(--border);
@@ -258,7 +258,7 @@
   .keep-gauge-label{ font-size:18px; font-weight:700; color:var(--main-green-dark); min-height:26px; }
 
   .feedback-banner{
-    width:100%; max-width:900px; text-align:center; font-size:26px; font-weight:700;
+    flex:1 1 auto; min-width:0; text-align:center; font-size:26px; font-weight:700;
     min-height:38px; border-radius:16px; padding:6px 10px;
     transition:background .15s, color .15s;
   }
@@ -513,10 +513,9 @@
       <div class="keep-gauge-label" id="gaugeLabel"></div>
     </div>
 
-    <div class="feedback-banner wait" id="feedbackBanner">おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね</div>
-
-    <div class="activity-under-stage-bar">
+    <div class="feedback-row">
       <button class="small-icon-btn" id="btnQuit" title="もどる">←</button>
+      <div class="feedback-banner wait" id="feedbackBanner">おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね</div>
       <button class="small-icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
     </div>
 
@@ -761,8 +760,8 @@ function isSquatting(lm){
   const hipToAnkle = ankleY - hipY; // 腰〜足首の縦距離(まっすぐ立っているときが最大)
   // まっすぐ立っているとき、hipToAnkleは概ねtorsoLenの1.6〜2倍程度になることが多いので、
   // それより明確に縮んでいれば、腰を落としている(しゃがんでいる)とみなす。
-  // しっかり深くしゃがまないとオッケーにならないよう、係数を厳しめにしている
-  return hipToAnkle < torsoLen * 1.0;
+  // 「ひざのちょっと上」くらいまで腰を落とせばオッケーになる、ほどよい緩さにしている
+  return hipToAnkle < torsoLen * 1.4;
 }
 function handsOnOwnEars(lm){
   // 両手で耳をタッチ:左手首が自分の左耳(7)、右手首が自分の右耳(8)の近くにあるか
