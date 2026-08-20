@@ -250,6 +250,55 @@
     transition:background .15s, color .15s;
   }
   .feedback-banner.ok{ background:#eaf7f0; color:var(--main-green-dark); }
+
+  /* ---------- カウントダウン表示 ---------- */
+  .countdown-overlay{
+    position:absolute; inset:0; z-index:20;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.28);
+    opacity:0; pointer-events:none; transition:opacity .15s;
+  }
+  .countdown-overlay.active{ opacity:1; }
+  .countdown-number{
+    font-size:min(22vw,120px); font-weight:700; color:#fff;
+    text-shadow:0 4px 14px rgba(0,0,0,.4);
+    animation:countdownPop .55s ease-out;
+  }
+  @keyframes countdownPop{
+    0%{ transform:scale(0.4); opacity:0; }
+    30%{ transform:scale(1.15); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+
+  /* ---------- 成功エフェクト(キラキラ) ---------- */
+  .success-burst{
+    position:absolute; inset:0; z-index:15; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    overflow:visible;
+  }
+  .success-burst .spark{
+    position:absolute; font-size:28px;
+    animation:sparkFly .8s ease-out forwards;
+  }
+  @keyframes sparkFly{
+    0%{ transform:translate(0,0) scale(0.4) rotate(0deg); opacity:1; }
+    100%{ transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(180deg); opacity:0; }
+  }
+
+  /* ---------- 全終了エフェクト ---------- */
+  .finish-overlay{
+    position:fixed; inset:0; z-index:200;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; overflow:hidden;
+  }
+  .finish-overlay .confetti{
+    position:absolute; top:-30px; font-size:26px;
+    animation:confettiFall linear forwards;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(105vh) rotate(360deg); opacity:.9; }
+  }
   .feedback-banner.wait{ background:transparent; color:var(--sub); font-size:17px; font-weight:400; }
 
   .activity-bottombar{
@@ -326,7 +375,7 @@
         <span class="setting-label">キープする<ruby>秒<rt>びょう</rt></ruby><ruby>数<rt>すう</rt></ruby></span>
         <div class="stepper">
           <button id="keepMinus">▽</button>
-          <input type="number" id="keepSecInput" value="5" min="1" max="30" inputmode="numeric">
+          <input type="number" id="keepSecInput" value="3" min="1" max="30" inputmode="numeric">
           <span class="unit">びょう</span>
           <button id="keepPlus">△</button>
         </div>
@@ -336,7 +385,7 @@
         <span class="setting-label">なんかい<ruby>出<rt>だ</rt></ruby>す?</span>
         <div class="stepper">
           <button id="roundsMinus">▽</button>
-          <input type="number" id="roundsInput" value="5" min="1" max="20" inputmode="numeric">
+          <input type="number" id="roundsInput" value="8" min="1" max="20" inputmode="numeric">
           <span class="unit">かい</span>
           <button id="roundsPlus">△</button>
         </div>
@@ -420,6 +469,10 @@
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
         <div class="camera-msg" id="cameraMsg">カメラをじゅんびしています…</div>
+        <div class="countdown-overlay" id="countdownOverlay">
+          <div class="countdown-number" id="countdownNumber"></div>
+        </div>
+        <div class="success-burst" id="successBurst"></div>
       </div>
       <div class="demo-pane" id="demoPane">
         <div class="demo-title">おてほん</div>
@@ -489,6 +542,9 @@
     </div>
   </div>
 </div>
+
+<!-- ===== 全終了エフェクト(紙吹雪) ===== -->
+<div class="finish-overlay" id="finishOverlay"></div>
 
 <script type="module">
 import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.20";
@@ -657,20 +713,27 @@ function wristNearHead(lm, wristIdx){
   return Math.sqrt(dx*dx+dy*dy) < 0.14;
 }
 function isSquatting(lm){
-  if(!lm[23]||!lm[24]||!lm[11]||!lm[12]) return false;
+  // スクワットのように腰を落としているかを、膝の高さで判定する
+  // (肩と腰の距離だけで見ると前傾姿勢でも成立してしまうため、膝の曲がりを見る)
+  if(!lm[23]||!lm[24]||!lm[25]||!lm[26]||!lm[27]||!lm[28]) return false;
   const hipY = (lm[23].y + lm[24].y)/2;
-  const shoulderY = (lm[11].y + lm[12].y)/2;
-  // しゃがむと肩と腰の距離(胴の縦幅)が縮む
-  return (hipY - shoulderY) < 0.16;
+  const kneeY = (lm[25].y + lm[26].y)/2;
+  const ankleY = (lm[27].y + lm[28].y)/2;
+  // 腰〜足首の距離のうち、腰〜膝が占める割合が大きいほど深く曲がっている
+  // (立っているときは腰が高く膝までの距離が短い。しゃがむと腰が下がり膝までの距離が伸びる)
+  const legLen = Math.max(0.05, ankleY - hipY);
+  const hipToKnee = kneeY - hipY;
+  return (hipToKnee / legLen) > 0.62;
 }
 function wristsForward(lm){
-  // 前ならえ:手首が肩の高さ付近にあり、かつ手首が肩よりカメラ側(z値が小さい)にある
+  // 前ならえ:手首が肩の高さ付近にあり、かつ左右の手首が体の正面で狭く(横に広げていない)そろっている
+  // (「手を横に広げる」との違いは、手首同士の横幅の狭さで区別する)
   if(!lm[15]||!lm[16]||!lm[11]||!lm[12]) return false;
   const avgShoulderY = (lm[11].y + lm[12].y)/2;
+  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
   const levelOk = Math.abs(lm[15].y - avgShoulderY) < 0.14 && Math.abs(lm[16].y - avgShoulderY) < 0.14;
-  const zOkLeft = (lm[15].z !== undefined && lm[11].z !== undefined) ? (lm[15].z < lm[11].z - 0.05) : true;
-  const zOkRight = (lm[16].z !== undefined && lm[12].z !== undefined) ? (lm[16].z < lm[12].z - 0.05) : true;
-  return levelOk && zOkLeft && zOkRight;
+  const narrowOk = Math.abs(lm[15].x - lm[16].x) < shoulderWidth * 1.3;
+  return levelOk && narrowOk;
 }
 function handsDownCheck(lm){
   // 気をつけ:両手首が腰の高さ付近、体の横幅の中に収まっている
@@ -689,10 +752,17 @@ function legsWideApart(lm){
   return Math.abs(lm[27].x - lm[28].x) > hipWidth * 1.8;
 }
 function oneLegRaised(lm){
-  // どちらかの足首が反対側の膝より高い(y座標が小さい)
-  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]) return false;
-  const leftUp = lm[27].y < lm[26].y - 0.06;
-  const rightUp = lm[28].y < lm[25].y - 0.06;
+  // どちらかの足首が、自分の膝の高さ付近まで上がっているかで判定する
+  // (反対側の膝と比べる方式だと基準が厳しくなりすぎるため、同じ脚の膝を基準にする)
+  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
+  const hipY = (lm[23].y + lm[24].y)/2;
+  const kneeYLeft = lm[25].y;
+  const kneeYRight = lm[26].y;
+  // 太ももの長さ(腰〜膝)を基準の目安にして、足首が腰に近づいた分だけ上がったとみなす
+  const thighLenLeft = Math.max(0.05, kneeYLeft - hipY);
+  const thighLenRight = Math.max(0.05, kneeYRight - hipY);
+  const leftUp = (lm[27].y - hipY) < thighLenLeft * 0.85;
+  const rightUp = (lm[28].y - hipY) < thighLenRight * 0.85;
   return leftUp || rightUp;
 }
 function armsCrossed(lm){
@@ -867,8 +937,8 @@ function drawStick(ctx,w,h,opt){
 const state = {
   settings: {
     selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","touchHead","squat","forward","handsDown","legsWide","oneLegUp","armsCross","comboSideUp"],
-    keepSec: 5,
-    rounds: 5,
+    keepSec: 3,
+    rounds: 8,
     timeLimitOn: true,
     timeLimitSec: 120,
     demoMode: "illust",
@@ -884,6 +954,7 @@ const state = {
   holding: false,
   succeededThisPose: false,
   roundLocked: false, // つぎへ待ちの間、判定を止める
+  isCountingDown: false, // カウントダウン中は判定を止める
   poseLandmarker: null,
   stream: null,
   rafId: null,
@@ -935,8 +1006,8 @@ function collectSettingsFromUI(){
     if(input.checked) selected.push(key);
   });
   state.settings.selectedPoses = selected.length ? selected : [POSE_ORDER[0]];
-  state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 5);
-  state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 5);
+  state.settings.keepSec = clampInt(document.getElementById("keepSecInput").value, 1, 30, 3);
+  state.settings.rounds = clampInt(document.getElementById("roundsInput").value, 1, 20, 8);
   state.settings.timeLimitOn = document.querySelector('input[name="timeLimitMode"]:checked').value === "on";
   state.settings.timeLimitSec = clampInt(document.getElementById("timeLimitInput").value, 5, 180, 120);
   state.settings.demoMode = document.querySelector('input[name="demoMode"]:checked').value;
@@ -1206,7 +1277,7 @@ function startDetectionLoop(){
       const result = state.poseLandmarker.detectForVideo(video, performance.now());
       const landmarks = (result.landmarks && result.landmarks[0]) ? result.landmarks[0] : null;
       drawSkeleton(landmarks);
-      if(!state.roundLocked) evaluatePose(landmarks);
+      if(!state.roundLocked && !state.isCountingDown) evaluatePose(landmarks);
     }
     state.rafId = requestAnimationFrame(loop);
   }
@@ -1245,13 +1316,14 @@ function loadCurrentPose(){
   state.succeededThisPose = false;
   state.keepStartTime = null;
   state.roundLocked = false;
+  state.isCountingDown = true;
   const timeupCouldHappen = state.settings.timeLimitOn && state.settings.timeupMode === "manual";
   btnNext.style.display = state.settings.afterOkMode==="manual" || timeupCouldHappen ? "inline-block" : "none";
   btnNext.disabled = true;
   btnNext.textContent = "つぎへ";
   setGauge(0);
   feedbackBanner.className = "feedback-banner wait";
-  feedbackBanner.innerHTML = "おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね";
+  feedbackBanner.innerHTML = "つぎのポーズをみてね";
   progressPill.textContent = `${state.currentIndex+1} / ${state.sequence.length}`;
 
   const key = state.sequence[state.currentIndex];
@@ -1263,6 +1335,43 @@ function loadCurrentPose(){
   }else{
     demoPane_showOverlayGuide();
   }
+
+  runCountdownThenReveal();
+}
+
+/* ---------- カウントダウン(3・2・1)してからポーズ判定を開始する ---------- */
+let countdownTimeoutId = null;
+function runCountdownThenReveal(){
+  const overlay = document.getElementById("countdownOverlay");
+  const numberEl = document.getElementById("countdownNumber");
+  const counts = [3,2,1];
+  overlay.classList.add("active");
+  if(countdownTimeoutId){ clearTimeout(countdownTimeoutId); countdownTimeoutId = null; }
+
+  let i = 0;
+  function step(){
+    if(i < counts.length){
+      numberEl.textContent = counts[i];
+      // 数字が変わるたびアニメーションをリスタートさせる
+      numberEl.style.animation = "none";
+      void numberEl.offsetWidth;
+      numberEl.style.animation = "";
+      playSound("countdown");
+      i++;
+      countdownTimeoutId = setTimeout(step, 700);
+    }else{
+      overlay.classList.remove("active");
+      state.isCountingDown = false;
+      feedbackBanner.className = "feedback-banner wait";
+      feedbackBanner.innerHTML = "おてほんと<ruby>同<rt>おな</rt></ruby>じ<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>にしてみてね";
+      startRoundTimer();
+    }
+  }
+  step();
+}
+function clearCountdown(){
+  if(countdownTimeoutId){ clearTimeout(countdownTimeoutId); countdownTimeoutId = null; }
+  document.getElementById("countdownOverlay").classList.remove("active");
 }
 
 function demoPane_showIllustOnly(){
@@ -1324,6 +1433,7 @@ function onPoseSuccess(key){
   feedbackBanner.textContent = "できたね！すごいね！";
   gaugeLabel.textContent = "できた！";
   playSound("ok");
+  triggerSuccessBurst();
   state.results.push({ poseKey:key, success:true });
 
   if(state.settings.afterOkMode === "auto"){
@@ -1332,6 +1442,28 @@ function onPoseSuccess(key){
     btnNext.disabled = false;
     btnNext.style.display = "inline-block";
   }
+}
+
+/* ---------- 成功時のキラキラエフェクト ---------- */
+const SUCCESS_EMOJIS = ["✨","⭐","🌟","💫"];
+function triggerSuccessBurst(){
+  const burst = document.getElementById("successBurst");
+  burst.innerHTML = "";
+  const count = 10;
+  for(let i=0;i<count;i++){
+    const span = document.createElement("span");
+    span.className = "spark";
+    span.textContent = SUCCESS_EMOJIS[Math.floor(Math.random()*SUCCESS_EMOJIS.length)];
+    const angle = (Math.PI*2*i)/count + (Math.random()*0.3);
+    const dist = 70 + Math.random()*50;
+    span.style.setProperty("--dx", `${Math.cos(angle)*dist}px`);
+    span.style.setProperty("--dy", `${Math.sin(angle)*dist}px`);
+    span.style.left = "50%";
+    span.style.top = "50%";
+    span.style.animationDelay = `${Math.random()*0.15}s`;
+    burst.appendChild(span);
+  }
+  setTimeout(()=>{ burst.innerHTML = ""; }, 1000);
 }
 
 function onTimeUp(){
@@ -1370,7 +1502,6 @@ function advanceRound(){
     finishActivity();
   }else{
     loadCurrentPose();
-    startRoundTimer();
   }
 }
 
@@ -1392,6 +1523,28 @@ function finishActivity(){
   });
   document.getElementById("resultEmoji").textContent = successCount === state.results.length ? "🎉" : "😊";
   showScreen("screen-result");
+  playSound("finish");
+  triggerFinishConfetti();
+}
+
+/* ---------- 全終了時の紙吹雪エフェクト ---------- */
+const CONFETTI_EMOJIS = ["🎉","🎊","✨","⭐","🌟"];
+function triggerFinishConfetti(){
+  const overlay = document.getElementById("finishOverlay");
+  overlay.innerHTML = "";
+  const count = 26;
+  for(let i=0;i<count;i++){
+    const span = document.createElement("span");
+    span.className = "confetti";
+    span.textContent = CONFETTI_EMOJIS[Math.floor(Math.random()*CONFETTI_EMOJIS.length)];
+    span.style.left = `${Math.random()*100}%`;
+    const duration = 2.2 + Math.random()*1.4;
+    span.style.animationDuration = `${duration}s`;
+    span.style.animationDelay = `${Math.random()*0.6}s`;
+    span.style.fontSize = `${20 + Math.random()*16}px`;
+    overlay.appendChild(span);
+  }
+  setTimeout(()=>{ overlay.innerHTML = ""; }, 4200);
 }
 
 /* ---------- 効果音(Web Audio APIで簡易生成、外部ファイル不要) ---------- */
@@ -1401,15 +1554,38 @@ function playSound(type){
   try{
     if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain); gain.connect(audioCtx.destination);
     if(type === "ok"){
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
       osc.frequency.setValueAtTime(660, now);
       osc.frequency.setValueAtTime(880, now+0.12);
       gain.gain.setValueAtTime(0.15, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now+0.35);
       osc.start(now); osc.stop(now+0.35);
+    }else if(type === "countdown"){
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(520, now);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now+0.18);
+      osc.start(now); osc.stop(now+0.18);
+    }else if(type === "finish"){
+      // 上昇するアルペジオで「ぜんぶ終わった!」を華やかに演出
+      const notes = [523,659,784,1047];
+      notes.forEach((freq,i)=>{
+        const startAt = now + i*0.13;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, startAt);
+        gain.gain.setValueAtTime(0.14, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt+0.4);
+        osc.start(startAt); osc.stop(startAt+0.4);
+      });
     }
   }catch(e){ /* 無視 */ }
 }
@@ -1424,15 +1600,14 @@ document.getElementById("btnStart").addEventListener("click", ()=>{
   // startSelectedLevelがnull(個別選択でどのレベルとも一致しない)のときは、
   // 設定画面で選んだチェック状態をそのまま使う
   startActivity();
-  startRoundTimer();
 });
 document.getElementById("btnQuit").addEventListener("click", ()=>{
   clearRoundTimer();
+  clearCountdown();
   showScreen("screen-start");
 });
 document.getElementById("btnResultRetry").addEventListener("click", ()=>{
   startActivity();
-  startRoundTimer();
 });
 document.getElementById("btnResultHome").addEventListener("click", ()=>{
   showScreen("screen-start");
