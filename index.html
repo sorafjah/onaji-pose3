@@ -761,8 +761,8 @@ function isSquatting(lm){
   const ankleToKnee = Math.max(0.03, ankleY - kneeY); // 足首〜ひざの高さ(基準)
   const ankleToHip = ankleY - hipY; // 足首〜腰の高さ
 
-  // 「足首〜腰」が「足首〜ひざ」の1.5倍未満まで腰が下がっていればオッケー
-  return ankleToHip < ankleToKnee * 1.5;
+  // 「足首〜腰」が「足首〜ひざ」の1.75倍未満まで腰が下がっていればオッケー
+  return ankleToHip < ankleToKnee * 1.75;
 }
 function handsOnOwnEars(lm){
   // 両手で耳をタッチ:左手首が自分の左耳(7)、右手首が自分の右耳(8)の近くにあるか
