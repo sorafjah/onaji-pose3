@@ -398,10 +398,10 @@
 
       <div class="setting-group">
         <span class="setting-label"><ruby>出<rt>だ</rt></ruby>す<ruby>順番<rt>じゅんばん</rt></ruby></span>
-        <div class="setting-desc">「せんたくした<ruby>順<rt>じゅん</rt></ruby>」は、チェックした<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>を<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に、くり<ruby>返<rt>かえ</rt></ruby>し<ruby>出<rt>だ</rt></ruby>します</div>
+        <div class="setting-desc">「<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に」は、チェックした<ruby>姿<rt>し</rt></ruby><ruby>勢<rt>せい</rt></ruby>を<ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に、くり<ruby>返<rt>かえ</rt></ruby>し<ruby>出<rt>だ</rt></ruby>します</div>
         <div class="radio-row" id="orderModeRow">
           <div class="radio-chip" data-value="random"><input type="radio" name="orderMode" id="orderRandom" value="random" checked><label for="orderRandom">ランダム</label></div>
-          <div class="radio-chip" data-value="sequential"><input type="radio" name="orderMode" id="orderSequential" value="sequential"><label for="orderSequential">せんたくした<ruby>順<rt>じゅん</rt></ruby></label></div>
+          <div class="radio-chip" data-value="sequential"><input type="radio" name="orderMode" id="orderSequential" value="sequential"><label for="orderSequential"><ruby>上<rt>うえ</rt></ruby>から<ruby>順<rt>じゅん</rt></ruby>に</label></div>
         </div>
       </div>
 
@@ -676,13 +676,13 @@ const POSE_DEFS = {
   rightKneeCrossLeft: {
     label: "みぎ<ruby>手<rt>て</rt></ruby>でひだりひざタッチ",
     ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだりひざタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossKnee', legs:'kneeBentLeft' }),
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossKnee' }),
     check: (lm)=> wristNearOppositeKnee(lm,16,25)
   },
   leftKneeCrossRight: {
     label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎひざタッチ",
     ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎひざタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossKnee', legs:'kneeBentRight' }),
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossKnee' }),
     check: (lm)=> wristNearOppositeKnee(lm,15,26)
   }
 };
@@ -995,9 +995,9 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX - sideSign*w*0.10, hipY - h*0.10);
       ctx.lineTo(cx - sideSign*markerWidth, hipY);
     }else if(mode === 'crossKnee'){
-      // 反対側の(軽く曲げた)ひざに向かって、手を伸ばそうとしている(触れていなくてもよい)
-      ctx.lineTo(startX - sideSign*w*0.05, hipY + h*0.06);
-      ctx.lineTo(cx - sideSign*w*0.02, hipY + h*0.16);
+      // 反対側のひざ(まっすぐ立った状態のひざの高さ)にタッチしにいく
+      ctx.lineTo(startX - sideSign*w*0.06, hipY + h*0.08);
+      ctx.lineTo(cx - sideSign*w*0.03, hipY + h*0.13);
     }else{
       // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
       ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
