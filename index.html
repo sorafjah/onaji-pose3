@@ -195,8 +195,12 @@
   /* ---------- 活動画面 ---------- */
   #screen-activity{ padding:10px; gap:8px; }
   .activity-topbar{
-    width:100%; max-width:900px; display:flex; align-items:center; justify-content:space-between;
+    width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
     gap:10px;
+  }
+  .activity-under-stage-bar{
+    width:100%; max-width:900px; display:flex; align-items:center; justify-content:center;
+    gap:14px;
   }
   .progress-pill{
     background:#fff; border-radius:20px; padding:8px 16px; font-size:15px; font-weight:700;
@@ -459,9 +463,7 @@
   <!-- ===== 活動画面 ===== -->
   <div id="screen-activity" class="screen">
     <div class="activity-topbar">
-      <button class="icon-btn" id="btnQuit" title="もどる">←</button>
       <div class="progress-pill" id="progressPill">1 / 5</div>
-      <button class="icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
     </div>
 
     <div class="stage-wrap">
@@ -479,6 +481,11 @@
         <canvas id="demoCanvas" width="200" height="200"></canvas>
         <div id="demoPoseName" style="font-size:15px;font-weight:700;color:var(--main-blue-dark);"></div>
       </div>
+    </div>
+
+    <div class="activity-under-stage-bar">
+      <button class="icon-btn" id="btnQuit" title="もどる">←</button>
+      <button class="icon-btn" id="btnHowToOpen" title="つかいかた">❓</button>
     </div>
 
     <div class="keep-gauge-wrap">
@@ -645,16 +652,16 @@ const POSE_DEFS = {
     check: (lm)=> handUpLegOutCheck(lm,'left')
   },
   rightHandToLeftShoulder: {
-    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>肩<rt>かた</rt></ruby>をタッチ",
-    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>肩<rt>かた</rt></ruby>をタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossShoulder' }),
-    check: (lm)=> wristNearOppositeShoulder(lm,16,11)
+    label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>耳<rt>みみ</rt></ruby>をタッチ",
+    ruby: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>耳<rt>みみ</rt></ruby>をタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'crossEar' }),
+    check: (lm)=> wristNearOppositeEar(lm,16,7)
   },
   leftHandToRightShoulder: {
-    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>肩<rt>かた</rt></ruby>をタッチ",
-    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>肩<rt>かた</rt></ruby>をタッチ",
-    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossShoulder' }),
-    check: (lm)=> wristNearOppositeShoulder(lm,15,12)
+    label: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>耳<rt>みみ</rt></ruby>をタッチ",
+    ruby: "ひだり<ruby>手<rt>て</rt></ruby>でみぎ<ruby>耳<rt>みみ</rt></ruby>をタッチ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armLeft:'crossEar' }),
+    check: (lm)=> wristNearOppositeEar(lm,15,8)
   },
   rightHipCrossLeftSide: {
     label: "みぎ<ruby>手<rt>て</rt></ruby>でひだり<ruby>腰<rt>こし</rt></ruby>タッチ・ひだり<ruby>手<rt>て</rt></ruby>よこ",
@@ -765,17 +772,22 @@ function legsWideApart(lm){
   return Math.abs(lm[27].x - lm[28].x) > hipWidth * 1.8;
 }
 function oneLegRaised(lm){
-  // どちらかの足首が、自分の膝の高さ付近まで上がっているかで判定する
-  // (反対側の膝と比べる方式だと基準が厳しくなりすぎるため、同じ脚の膝を基準にする)
+  // 片足を上げているかを判定する。以下のどちらかを満たせばOK(緩めの判定):
+  //  (a) 足首が、自分の膝の高さ程度まで上がっている
+  //  (b) 膝が、腰の高さ程度まで上がっている(太もも全体を持ち上げる動き)
   if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
   const hipY = (lm[23].y + lm[24].y)/2;
-  const kneeYLeft = lm[25].y;
-  const kneeYRight = lm[26].y;
-  // 太ももの長さ(腰〜膝)を基準の目安にして、足首が腰に近づいた分だけ上がったとみなす
-  const thighLenLeft = Math.max(0.05, kneeYLeft - hipY);
-  const thighLenRight = Math.max(0.05, kneeYRight - hipY);
-  const leftUp = (lm[27].y - hipY) < thighLenLeft * 0.85;
-  const rightUp = (lm[28].y - hipY) < thighLenRight * 0.85;
+
+  function oneSideRaised(ankleY, kneeY){
+    // (a) 足首が、立っているときの膝の高さくらいまで上がっている
+    const ankleNearKnee = ankleY < kneeY + 0.06;
+    // (b) 膝が、腰の高さくらいまで上がっている
+    const kneeNearHip = kneeY < hipY + 0.10;
+    return ankleNearKnee || kneeNearHip;
+  }
+
+  const leftUp = oneSideRaised(lm[27].y, lm[25].y);
+  const rightUp = oneSideRaised(lm[28].y, lm[26].y);
   return leftUp || rightUp;
 }
 function armsCrossed(lm){
@@ -817,12 +829,39 @@ function wristNearOppositeShoulder(lm, wristIdx, targetShoulderIdx){
   const dy = lm[wristIdx].y - lm[targetShoulderIdx].y;
   return Math.sqrt(dx*dx+dy*dy) < 0.13;
 }
+function wristNearOppositeEar(lm, wristIdx, targetEarIdx){
+  // 正中線を越えて反対側の耳にタッチしているかを判定する。
+  // 耳との距離が近いことに加えて、体の中心線をしっかり越えていることも必須にする
+  if(!lm[wristIdx] || !lm[targetEarIdx] || !lm[11] || !lm[12]) return false;
+  const dx = lm[wristIdx].x - lm[targetEarIdx].x;
+  const dy = lm[wristIdx].y - lm[targetEarIdx].y;
+  const nearEar = Math.sqrt(dx*dx+dy*dy) < 0.13;
+
+  const bodyCenterX = (lm[11].x + lm[12].x)/2;
+  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
+  const crossedMidline = wristIdx === 16
+    ? (lm[wristIdx].x < bodyCenterX - shoulderWidth*0.1)
+    : (lm[wristIdx].x > bodyCenterX + shoulderWidth*0.1);
+
+  return nearEar && crossedMidline;
+}
 function wristNearOppositeHip(lm, wristIdx, targetHipIdx){
-  // 正中線を越えて反対側の腰にタッチしているかを、手首と腰の距離で判定する
-  if(!lm[wristIdx] || !lm[targetHipIdx]) return false;
+  // 正中線を越えて反対側の腰にタッチしているかを判定する。
+  // 「腰との距離が近い」だけでなく、「体の中心線をしっかり越えている」ことも必須にする
+  // (そうしないと、手を下ろしただけで距離条件だけ満たしてしまうケースがあるため)
+  if(!lm[wristIdx] || !lm[targetHipIdx] || !lm[11] || !lm[12]) return false;
   const dx = lm[wristIdx].x - lm[targetHipIdx].x;
   const dy = lm[wristIdx].y - lm[targetHipIdx].y;
-  return Math.sqrt(dx*dx+dy*dy) < 0.14;
+  const nearHip = Math.sqrt(dx*dx+dy*dy) < 0.14;
+
+  const bodyCenterX = (lm[11].x + lm[12].x)/2;
+  const shoulderWidth = Math.abs(lm[11].x - lm[12].x) || 0.1;
+  // 手首が、体の中心線を越えて反対側にしっかり入っているか(中心から肩幅の15%以上、反対側へ)
+  const crossedMidline = wristIdx === 16
+    ? (lm[wristIdx].x < bodyCenterX - shoulderWidth*0.15) // 右手首(16)が中心より左側にある
+    : (lm[wristIdx].x > bodyCenterX + shoulderWidth*0.15); // 左手首(15)が中心より右側にある
+
+  return nearHip && crossedMidline;
 }
 function sideArmCheck(lm, wristIdx){
   // 片方の手だけが横に広がっているかの判定(肩の高さ付近・体から十分離れている)
@@ -931,17 +970,21 @@ function drawStick(ctx,w,h,opt){
       ctx.lineTo(startX - sideSign*w*0.06, neckY + h*0.08);
       ctx.lineTo(cx - sideSign*w*0.16, neckY + h*0.16);
     }else if(mode === 'crossShoulder'){
-      // 反対側の肩にタッチ:正中線を越えて反対の肩の位置まで
+      // 反対側の肩にタッチ:正中線を越えて反対の肩の位置まで(現在は未使用、耳タッチはcrossEar)
       ctx.lineTo(startX - sideSign*w*0.10, neckY - h*0.02);
       ctx.lineTo(cx - sideSign*markerWidth, neckY);
+    }else if(mode === 'crossEar'){
+      // 反対側の耳にタッチ:正中線を越えて、反対側の頭の横あたりまで届く
+      ctx.lineTo(startX - sideSign*w*0.08, neckY - h*0.14);
+      ctx.lineTo(cx - sideSign*w*0.08, headY);
     }else if(mode === 'crossHip'){
-      // 反対側の腰にタッチ:正中線を越えて反対側・腰の高さまで
-      ctx.lineTo(startX - sideSign*w*0.06, hipY - h*0.06);
-      ctx.lineTo(cx - sideSign*w*0.10, hipY - h*0.02);
+      // 反対側の腰にタッチ:正中線をしっかり越えて、反対側の腰の横線の端まで届く
+      ctx.lineTo(startX - sideSign*w*0.10, hipY - h*0.10);
+      ctx.lineTo(cx - sideSign*markerWidth, hipY);
     }else{
-      // down(気をつけ・何もしていないとき):肩の真下へまっすぐ伸ばす
-      ctx.lineTo(startX, neckY + h*0.14);
-      ctx.lineTo(startX, neckY + h*0.28);
+      // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
+      ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
+      ctx.lineTo(startX + sideSign*w*0.05, neckY + h*0.28);
     }
     ctx.stroke();
   }
