@@ -670,6 +670,24 @@ const POSE_DEFS = {
     illust: (ctx,w,h)=>drawStick(ctx,w,h,{ combo:'sideUp' }),
     check: (lm)=> comboSideUpCheck(lm)
   },
+  machoPose: {
+    label: "マッチョポーズ",
+    ruby: "マッチョポーズ",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ arms:'macho' }),
+    check: (lm)=> machoPoseCheck(lm)
+  },
+  haniwaUpDown: {
+    label: "ハニワポーズ(みぎ<ruby>上<rt>うえ</rt></ruby>)",
+    ruby: "ハニワポーズ(みぎ<ruby>上<rt>うえ</rt></ruby>)",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'haniwaUp', armLeft:'haniwaDown' }),
+    check: (lm)=> haniwaCheck(lm,'rightUp')
+  },
+  haniwaDownUp: {
+    label: "ハニワポーズ(ひだり<ruby>上<rt>うえ</rt></ruby>)",
+    ruby: "ハニワポーズ(ひだり<ruby>上<rt>うえ</rt></ruby>)",
+    illust: (ctx,w,h)=>drawStick(ctx,w,h,{ armRight:'haniwaDown', armLeft:'haniwaUp' }),
+    check: (lm)=> haniwaCheck(lm,'leftUp')
+  },
   rightUpLeftLegOut: {
     label: "みぎ<ruby>手<rt>て</rt></ruby>うえ・ひだり<ruby>足<rt>あし</rt></ruby>よこ",
     ruby: "みぎ<ruby>手<rt>て</rt></ruby>うえ・ひだり<ruby>足<rt>あし</rt></ruby>よこ",
@@ -707,12 +725,12 @@ const POSE_DEFS = {
     check: (lm)=> wristNearOppositeKnee(lm,15,26)
   }
 };
-const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
+const POSE_ORDER = ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","machoPose","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp","haniwaUpDown","haniwaDownUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"];
 
 /* ---------- レベル分け(設定画面のショートカット用) ---------- */
 const POSE_LEVELS = {
-  easy: ["banzai","armsSide","forward","handsDown"],
-  normal: ["rightHandUp","leftHandUp","squat","legsWideLeft","legsWideRight"],
+  easy: ["banzai","armsSide","forward","handsDown","machoPose"],
+  normal: ["rightHandUp","leftHandUp","squat","legsWideLeft","legsWideRight","haniwaUpDown","haniwaDownUp"],
   hard: ["rightLegUp","leftLegUp","armsCross","comboSideUp","rightUpLeftLegOut","leftUpRightLegOut","rightHipCrossLeftSide","leftHipCrossRightSide","rightKneeCrossLeft","leftKneeCrossRight"]
 };
 
@@ -796,25 +814,16 @@ function handsDownCheck(lm){
 }
 function oneLegDiagonalUp(lm, side){
   // 片足を斜め外側に上げているかを判定する。
-  // 「上げた足の足首が、軸足のひざより高い位置に来ているか」というシンプルな基準にする
-  // (体格やカメラ距離の影響を受けにくく、確実に反応する)。
-  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]||!lm[23]||!lm[24]) return false;
-  const hipCenterX = (lm[23].x + lm[24].x)/2;
-
-  function diagonalCheck(ankle, axisKnee, outwardSign){
-    // 上げた足の足首が、軸足のひざより高い(y座標が小さい)
-    const higherThanAxisKnee = ankle.y < axisKnee.y;
-    // 外側方向に開いているか(緩めの基準。正中線をわずかでも外側に越えていればOK)
-    const outward = (ankle.x - hipCenterX) * outwardSign > 0;
-    return higherThanAxisKnee && outward;
-  }
+  // 「上げた足の足首が、軸足のひざより高い位置に来ているか」だけを見るシンプルな基準にする
+  // (外側に開いているかどうかは問わない。高さだけで確実に反応させることを優先する)。
+  if(!lm[27]||!lm[28]||!lm[25]||!lm[26]) return false;
 
   if(side === 'left'){
     // 左足(27)を上げる。軸足は右足なので右ひざ(26)が基準
-    return diagonalCheck(lm[27], lm[26], -1);
+    return lm[27].y < lm[26].y;
   }else{
     // 右足(28)を上げる。軸足は左足なので左ひざ(25)が基準
-    return diagonalCheck(lm[28], lm[25], 1);
+    return lm[28].y < lm[25].y;
   }
 }
 function oneLegRaised(lm, side){
@@ -850,6 +859,28 @@ function comboSideUpCheck(lm){
   const leftSide = Math.abs(lm[15].y - avgShoulderY) < 0.12;
   const rightSide = Math.abs(lm[16].y - avgShoulderY) < 0.12;
   return (leftUp && rightSide) || (rightUp && leftSide);
+}
+function machoPoseCheck(lm){
+  // マッチョポーズ:両ひじが肩の高さ付近で横に張り出し、両手首がひじより上にある(力こぶの形)
+  if(!lm[13]||!lm[14]||!lm[15]||!lm[16]||!lm[11]||!lm[12]) return false;
+  const avgShoulderY = (lm[11].y + lm[12].y)/2;
+  const elbowLevelOk = Math.abs(lm[13].y - avgShoulderY) < 0.15 && Math.abs(lm[14].y - avgShoulderY) < 0.15;
+  const wristAboveElbowLeft = lm[15].y < lm[13].y - 0.03;
+  const wristAboveElbowRight = lm[16].y < lm[14].y - 0.03;
+  return elbowLevelOk && wristAboveElbowLeft && wristAboveElbowRight;
+}
+function haniwaCheck(lm, mode){
+  // ハニワポーズ:片方の腕は横に伸びて手首がひじより上、もう片方は横に伸びて手首がひじより下
+  if(!lm[13]||!lm[14]||!lm[15]||!lm[16]) return false;
+  const rightUp = lm[16].y < lm[14].y - 0.05; // 右手首が右ひじより上
+  const rightDown = lm[16].y > lm[14].y + 0.05; // 右手首が右ひじより下
+  const leftUp = lm[15].y < lm[13].y - 0.05; // 左手首が左ひじより上
+  const leftDown = lm[15].y > lm[13].y + 0.05; // 左手首が左ひじより下
+  if(mode === 'rightUp'){
+    return rightUp && leftDown;
+  }else{
+    return leftUp && rightDown;
+  }
 }
 function handUpLegOutCheck(lm, side){
   // side:'right'なら「右手あげ+左足よこ」、'left'なら「左手あげ+右足よこ」(コグトレの手足分離運動を想定)
@@ -1042,6 +1073,24 @@ function drawStick(ctx,w,h,opt){
       // 反対側のひざ(まっすぐ立った状態のひざの高さ)にタッチしにいく
       ctx.lineTo(startX - sideSign*w*0.08, hipY + h*0.10);
       ctx.lineTo(cx - sideSign*legStanceWidth*0.55, hipY + h*0.18);
+    }else if(mode === 'macho'){
+      // マッチョポーズ:ひじを横に張り出し、そこから手首をまっすぐ上げる(力こぶの形)
+      const elbowX = startX + sideSign*w*0.22;
+      const elbowY = neckY + h*0.02;
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(elbowX - sideSign*w*0.02, elbowY - h*0.14);
+    }else if(mode === 'haniwaUp'){
+      // ハニワポーズ(上):ひじを横に伸ばし、そこから手首を上に曲げる
+      const elbowX = startX + sideSign*w*0.24;
+      const elbowY = neckY + h*0.02;
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(elbowX, elbowY - h*0.16);
+    }else if(mode === 'haniwaDown'){
+      // ハニワポーズ(下):ひじを横に伸ばし、そこから手首を下に曲げる
+      const elbowX = startX + sideSign*w*0.24;
+      const elbowY = neckY + h*0.02;
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(elbowX, elbowY + h*0.16);
     }else{
       // down(気をつけ・何もしていないとき):腰の線と重ならないよう、少し外側に開いて伸ばす
       ctx.lineTo(startX + sideSign*w*0.03, neckY + h*0.14);
@@ -1056,6 +1105,11 @@ function drawStick(ctx,w,h,opt){
   else if(opt.arms === 'shoulderTouch'){ arm(-1,'shoulderTouch'); arm(1,'shoulderTouch'); }
   else if(opt.arms === 'ownEarTouch'){ arm(-1,'ownEarTouch'); arm(1,'ownEarTouch'); }
   else if(opt.arms === 'cross'){ arm(-1,'crossToOpposite'); arm(1,'crossToOpposite'); }
+  else if(opt.arms === 'macho'){ arm(-1,'macho'); arm(1,'macho'); }
+  else if(opt.armRight === 'haniwaUp' || opt.armRight === 'haniwaDown'){
+    arm(-1, opt.armLeft); // 左は 'haniwaUp'/'haniwaDown' がそのまま渡ってくる
+    arm(1, opt.armRight);
+  }
   else if(opt.armRight === 'crossHip' || opt.armLeft === 'crossHip'){
     // 正中線を越えて腰タッチ+反対の手はよこ/うえ、という左右非対称の複合ポーズ
     arm(-1, opt.armLeft === 'crossHip' ? 'crossHip' : (opt.armLeft || 'down'));
@@ -1079,7 +1133,7 @@ function drawStick(ctx,w,h,opt){
 ========================================================= */
 const state = {
   settings: {
-    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp"],
+    selectedPoses: ["banzai","rightHandUp","leftHandUp","armsSide","squat","forward","handsDown","machoPose","legsWideLeft","legsWideRight","rightLegUp","leftLegUp","armsCross","comboSideUp","haniwaUpDown","haniwaDownUp"],
     keepSec: 3,
     rounds: 10,
     orderMode: "sequential",
